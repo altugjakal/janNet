@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+
+<html>
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>janNet</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='index.css') }}">
+</head>
+
+<body>
+
+
+    <div class='search-container'>
+        <h1>janNet</h1>
+        <h4>Your Personal Web Crawler</h4>
+        <div class="search-box">
+            <div class="search-icon">&#128269;</div>
+            <form onsubmit="searchInput(event); return false;">
+                <input type="text" class="search-input" id="searchInput" placeholder="Search...">
+                <button type="submit" style="display:none"></button>
+            </form>
+        </div>
+            <p id="result" class="result"></p>
+    </div>
+
+
+
+
+        <script>
+        async function searchInput(e) {
+            e.preventDefault();
+            const input = document.getElementById("searchInput").value;
+
+            const response = await fetch("/search/" + encodeURIComponent(input), {
+                method: "GET"
+            });
+
+            const data = await response.json();
+            document.getElementById("result").textContent = "Result: " + data.result;
+            
+            
+        }
+    </script>
+</body>
+
+</html>

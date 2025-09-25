@@ -6,6 +6,11 @@ from utils.data_handling import manage_for_index
 import re
 import json
 from utils.misc import extract_keywords
+from flask import Flask
+from flask import render_template, jsonify
+import webbrowser
+
+app = Flask(__name__)
 
 visited_urls = read_from_csv("./csv/urls.csv")
 stored_domains = read_from_csv("./csv/domains.csv")
@@ -101,9 +106,8 @@ def crawl(url, sleep_median=3, sleep_padding=1):
     time.sleep(sleep_median + (sleep_padding * (2 * (0.5 - time.time() % 1))))
 
 def main():
-    
+    webbrowser.open('http://localhost:5000')
 
-    
     for url in url_list:
         if url in visited_urls:
             continue
@@ -118,5 +122,18 @@ def main():
     print(f"Total unique domains found: {len(domain_list)}")
 
 
+@app.route("/search/<term>")
+def searchRoute(term):
+    results = search(term)
+    return jsonify(results)
+
+
+@app.route("/")
+def index():
+    return render_template("index.html")
+
+
 if __name__ == "__main__":
     main()
+    app.run()
+    
