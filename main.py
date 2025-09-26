@@ -30,8 +30,8 @@ def search(term):
     for keyword, url in data:
         if keyword in terms:
             result_url = json.loads(url)
-            result_url = next(iter(result_url.keys()))
-            results.append(result_url)
+            for single_url in result_url.keys():
+                results.append(single_url)
     
     return results
         

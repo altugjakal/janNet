@@ -3,6 +3,7 @@ body {
     background-color: #ffffff;
     margin: 0;
     padding: 0;
+    overflow: scroll;
 }
 
 .search-container {
@@ -10,14 +11,31 @@ body {
     justify-content: center;
     align-items: center;
     flex-direction: column;
-    height: 100vh;
+    height: 80%;
 }
 
 
+.logo {
+    font-size: 96px;
+    line-height: 0.4;
+    color: rgb(179, 13, 13);
+    font-family: 'Brush Script MT', cursive;
+}
 
-
-
-
+.button-container {
+    margin-top: 10px;
+    display: flex;
+    gap: 10px;
+}
+.lucky-button {
+    
+    padding: 10px 20px;
+    background-color: #f8f8f8;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 16px;
+}
 
 .search-box {
     position: relative;
@@ -36,6 +54,40 @@ body {
     padding: 10px 40px;
     border: 1px solid #ccc;
     border-radius: 4px;
-    width: 300px;
+    width: 40vw;
     font-size: 16px;
+}
+
+.result-wrapper {
+    margin-top: 20px;
+    width: 60vw;
+
+}
+
+.result-item {
+    padding: 10px;
+    min-height: 60px;
+    border-bottom: 1px solid #eee;
+}
+
+.result-item:last-child {
+    border-bottom: none;
+    margin-bottom: 40px;
+}
+#result-container {
+    display: flex;
+    justify-content: center;
+    height: auto;
+}
+
+.footer {
+    position: fixed;
+    bottom: 0;
+    width: 100%;
+    background-color: #f8f8f8;
+    border-top: 1px solid  #ccc;
+    text-align: center;
+    padding: 10px 0;
+    font-size: 14px;
+    color: #555;
 }
