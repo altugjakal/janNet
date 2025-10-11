@@ -1,28 +1,42 @@
-
 import re
+import requests
+from utils.regex import reformat_html_tags
 
+from nltk.stem import PorterStemmer
+from nltk.corpus import stopwords
+
+
+stop_words = set(stopwords.words('english'))
 
 def extract_keywords(text):
-
-    stop_words = {
-        'the', 'a', 'an', 'and', 'or', 'but', 'in', 'on', 'at', 'to', 'for', 
-        'of', 'with', 'by', 'is', 'are', 'was', 'were', 'be', 'been', 'have', 
-        'has', 'had', 'do', 'does', 'did', 'will', 'would', 'could', 'should', 
-        'may', 'might', 'this', 'that', 'these', 'those', 'i', 'you', 'he', 
-        'she', 'it', 'we', 'they', 'me', 'him', 'her', 'us', 'them', 'my', 
-        'your', 'his', 'its', 'our', 'their', 'can', 'also', 'more', 'very',
-        'so', 'just', 'like', 'get', 'go', 'come', 'see', 'know', 'take',
-        'make', 'way', 'time', 'well', 'good', 'new', 'first', 'last', 'long',
-        'great', 'little', 'own', 'other', 'old', 'right', 'big', 'high',
-        'different', 'small', 'large', 'next', 'early', 'young', 'important',
-        'few', 'public', 'bad', 'same', 'able'
-    }
     
+    stemmer = PorterStemmer()
     
     words = re.findall(r'\b[a-zA-Z]+\b', text.lower())
-
-    filtered_words = [word for word in words 
-        if word not in stop_words and len(word) >= 3]
     
-
+    filtered_words = [
+        stemmer.stem(word) 
+        for word in words 
+        if word not in stop_words and len(word) >= 3
+    ]
+    
     return filtered_words
+
+
+def site_details(url):
+    try:
+        response = requests.get(url, timeout=10, allow_redirects=True, headers={
+            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/58.0.3029.110 Safari/537.3'
+        })
+    except requests.RequestException as e:
+        print(f"Request failed for {url}")
+        return "No title available", "No description available", "No content available"
+
+    if response.status_code == 200:
+        reformatted_content, texts = reformat_html_tags(response.text)
+        description = texts[8][0] if texts[8] else texts[7][0] if texts[7] else texts[6][0] if texts[6] else "No description available"
+        title = texts[0][0] if texts[0] else "No title available"
+
+        return title, description, reformatted_content
+    else:
+        return "No title available", "No description available", "No content available"

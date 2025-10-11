@@ -1,131 +1,118 @@
 import requests
 from utils.regex import reformat_html_tags, extract_anchors, get_domain
-from utils.data_handling import write_to_csv, read_from_csv
+from utils.data_handling import remove_from_csv, write_to_csv, read_from_csv
 import time 
 from utils.data_handling import manage_for_index
 import re
 import json
-from utils.misc import extract_keywords
+from utils.misc import extract_keywords, site_details
 from flask import Flask
 from flask import render_template, jsonify
-import webbrowser
+from core import crawl, search, reasoner
+from huggingface_hub import InferenceClient
+import threading
+import traceback
+from constants import first_urls
 
 app = Flask(__name__)
 
+host = 'localhost'
+port = 8080
+
+client = InferenceClient(
+provider="hf-inference",
+api_key="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"
+)
+
+urls_to_visit = read_from_csv("./csv/queue.csv")
 visited_urls = read_from_csv("./csv/urls.csv")
 stored_domains = read_from_csv("./csv/domains.csv")
-indexes = read_from_csv("./csv/indexes.csv")
-first_item = visited_urls[-1] if visited_urls else "https://alltop.com/"
-url_list = [first_item]
-domain_list = []
 
 
-def search(term):
-    terms = extract_keywords(term)
-    results = []
+
+first_items = first_urls.copy()
+visited_urls = [row[0] for row in visited_urls] if visited_urls else []
+url_list = visited_urls
+url_queue_list = [row[0] for row in urls_to_visit] if urls_to_visit else first_items
+new_url_list = []
+domain_list = [row[0] for row in stored_domains] if stored_domains else [get_domain(url) for url in first_items]
 
 
-    data = read_from_csv("./csv/indexes.csv")
 
-    for keyword, url in data:
-        if keyword in terms:
-            result_url = json.loads(url)
-            for single_url in result_url.keys():
-                results.append(single_url)
-    
-    return results
-        
+
+
+
 
     
 
-def crawl(url, sleep_median=3, sleep_padding=1):
 
-    headers = {
-        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
-        }
-
-    if url.startswith("http"):
-        url = url
-    else:
-
-        url = "http://" + url
-
-    try:
-        response = requests.get(url, headers=headers, timeout=10, allow_redirects=True)
-    except requests.RequestException as e:
-        print(f"Request failed for {url}")
-        return
-
-    if response.status_code == 200:
-        content = response.text
-        
-        anchors = extract_anchors(content)
-
-        for anchor in anchors:
-            if anchor.startswith("http"):
-
-                
-                if get_domain(anchor) not in domain_list and [get_domain(anchor)] not in stored_domains:
-                    domain_list.append(get_domain(anchor))
-                    write_to_csv("./csv/domains.csv", [get_domain(anchor)])
-                if anchor not in url_list and [get_domain(anchor), anchor] not in visited_urls:
-                    url_list.append(anchor)
-                    write_to_csv("./csv/urls.csv", [get_domain(anchor), anchor])
-
-
-        print(f"Found {len(anchors)} anchors ({len(url_list)} urls in store, {len(domain_list)} domains in store)")
-        content, texts = reformat_html_tags(content)
-        
-# Extract keywords from different HTML tags
-
-        element_types = [
-            (texts[0], 8, "title"),    # title
-            (texts[1], 2, "h1"),       # h1
-            (texts[2], 3, "h2"),       # h2
-            (texts[3], 4, "h3"),       # h3
-            (texts[4], 5, "h4"),       # h4
-            (texts[5], 6, "h5"),       # h5
-            (texts[6], 7, "h6"),       # h6
-            (texts[7], 1, "p")         # paragraphs
-        ]
-
-        for text_list, importance, element_type in element_types:
-            keywords = []
-            for text in text_list:
-                keywords += extract_keywords(text)
-            manage_for_index(url=url, keywords=keywords, importance=importance)
-
-        
-
-#-----------------------        
-
-        print(f"200: {url}")
-    else:
-        print(f"Could not find url: {url}")
-
-    time.sleep(sleep_median + (sleep_padding * (2 * (0.5 - time.time() % 1))))
 
 def main():
-    webbrowser.open('http://localhost:5000')
+    
+    global url_queue_list, domain_list, new_url_list, url_list, visited_urls
 
-    for url in url_list:
-        if url in visited_urls:
+    print("Starting crawler...")
+    print('Want to add new url to starting batch? (y/n): ')
+    add_url = input()
+    if add_url.lower() == 'y':
+        new_url = input('Enter the new URL: ')
+        url_queue_list.append(new_url)
+        write_to_csv("./csv/queue.csv", new_url)
+        print(f"Added {new_url} to the queue.")
+
+    for url in url_queue_list:
+        if url in url_list:
             continue
         try:
-            crawl(url, sleep_median=3, sleep_padding=1)
+            url_queue_list, domain_list, new_url_list = crawl(url, sleep_median=3, sleep_padding=1, domain_list=domain_list, url_queue_list=url_queue_list, new_url_list=new_url_list, url_list=url_list)
         except Exception as e:
-            print(f"Error occurred while crawling {url}: {e}")
+            traceback.print_exc()
             continue
+
 
 
     print(f"Total unique URLs found: {len(url_list)}")
     print(f"Total unique domains found: {len(domain_list)}")
 
 
+
+
 @app.route("/search/<term>")
 def searchRoute(term):
+    
+     #keep here indexes are always updated
     results = search(term)
-    return jsonify(results)
+    site_data  = []
+    contents = []
+
+    
+    
+
+    for result in results:
+        title, description, content = site_details(result)
+        contents.append(content)
+
+
+        site_data.append({
+            'url': result,
+            'title': title,
+            'description': description,
+            'domain': get_domain(result),
+            'favicon': f"https://www.google.com/s2/favicons?domain={get_domain(result)}"
+
+        })
+
+    if contents:
+        summary = reasoner(term, contents, urls=results, client=client)
+        return jsonify({
+            'results': site_data,
+            'summary': summary
+        })
+
+    else: 
+        return jsonify({
+            'results': site_data
+        })
 
 
 @app.route("/")
@@ -134,6 +121,7 @@ def index():
 
 
 if __name__ == "__main__":
-    main()
-    app.run()
-    
+    crawler_thread = threading.Thread(target=main)
+    crawler_thread.start()
+    time.sleep(5)
+    app.run(host=host, port=port, debug=False)

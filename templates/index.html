@@ -11,11 +11,11 @@
 
 <body>
 
-
+    <div class="inner-container">
     <div class='search-container'>
         <h1 class="logo">janNet</h1>
         <div class="search-box">
-            <div class="search-icon">&#128269;</div>
+            <div class="search-icon" id="searchIcon">&#128269;</div>
             <input type="text" class="search-input" id="searchInput" placeholder="Search..."
                 onkeypress="handleKeyPress(event)">
             <button type="button" style="display:none"></button>
@@ -28,47 +28,67 @@
         </div>
     </div>
 
-        <div id="result-container">
-        </div>
+    <div id="result-container">
+    </div>
+</div>  
+    <div class="footer">
+        <p>&copy; 2025 janNet. All rights reserved.</p>
+    </div>
 
-                <div class="footer">
-            <p>&copy; 2025 janNet. All rights reserved.</p>
-        </div>
+    <script>
 
+        function escapeHtml(text) {
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
 
-        <script>
-            async function searchInput(e) {
-                e.preventDefault();
-                const input = document.getElementById("searchInput").value;
+        async function searchInput(e) {
+            e.preventDefault();
+            document.getElementById("searchIcon").textContent = "⏳";
+            const input = document.getElementById("searchInput").value;
 
-                const response = await fetch("/search/" + encodeURIComponent(input), {
-                    method: "GET"
-                });
+            if (input.startsWith("http://") || input.startsWith("https://")) {
+                window.location.href = input;
+                return;
+            }
 
-                const data = await response.json();
+            const response = await fetch("/search/" + encodeURIComponent(input), {
+                method: "GET"
+            });
 
-                const container = document.getElementById('result-container');
+            const data = await response.json();
+            document.getElementById("searchIcon").textContent = "🔍";
 
-                container.innerHTML = `
-            <div class="result-wrapper">
-            ${input.toLowerCase().includes('star trek') ? `<img src="https://media1.tenor.com/m/owM2oYfayfQAAAAC/vulcan-salute-spock.gif" alt="Live Long and Prosper" style="max-width: 100%; height: auto;, align:center" />` : `<h3>Results for: ${input}</h3>`}
+            const container = document.getElementById('result-container');
 
-                ${data.map(item => `
+            console.log(data.results);
+
+            container.innerHTML = `
+        <div class="result-wrapper">
+            <h2>Search Results for "${input}"</h2>
+            ${data.summary ? `<p class="summary">${data.summary}</p>` : ''}
+            ${data.results.map(item => `
                 <div class="result-item">
-                    <a href="${item}">${item}</a>
+                    <div class='site-profile'>
+                        <img src="${item.favicon}" alt="Favicon" class="favicon">
+
+                        <a href="${item.url}" class="domain-link"><span class="domain">${item.domain}</span></a>
+                    </div>
+                    <h4>${escapeHtml(item.title)}</h4>
+                    <p>${escapeHtml(item.description)}</p>
+                    <a href="${item.url}">${item.url}</a>
                 </div>
-                `).join('')}
-            </div>
-            `;
+            `).join('')}
+        </div>`;
+        }
 
+        function handleKeyPress(event) {
+            if (event.key === 'Enter') {
+                searchInput(event);
             }
-
-            function handleKeyPress(event) {
-                if (event.key === 'Enter') {
-                    searchInput(event);
-                }
-            }
-        </script>
+        }
+    </script>
 </body>
 
 </html>
