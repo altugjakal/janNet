@@ -6,6 +6,7 @@ from utils.misc import extract_keywords
 
 from utils.data_handling import write_to_csv, manage_for_index, remove_from_csv, read_from_csv
 import json
+import urllib.parse
 
 
 def summarize_content(content):
@@ -91,10 +92,10 @@ def crawl(url, sleep_median, sleep_padding, domain_list, url_queue_list, new_url
         content, texts = reformat_html_tags(content)
 
 
-# Extract keywords from different HTML tags, get a proper extractor ERROR ABOUT INDEX IS HERE
+# Extract keywords from different HTML tags, get a proper extractor ERROR ABOUT INDEX IS HERE -fixed
 
 
-#idiot you skipped anchor titles
+#idiot you skipped anchor titles -thats not necesarry rn
         text_list = [
             (texts[0] if len(texts) > 0 else [], "title"),
             (texts[1] if len(texts) > 0 else [], "h1"),       
@@ -146,12 +147,18 @@ def search(term):
             result_url = json.loads(url)
             
             for single_url, value in result_url.items():
+
+                path = urllib.parse.urlparse(single_url).path
+                path = path.split('/')
+                path_length_penalty = len(path)
+
                 if single_url in url_scores:
+
                     url_scores[single_url] = 2**value
                 else:
                     url_scores[single_url] = value
 
-                
+                url_scores[single_url] = url_scores[single_url] - path_length_penalty
 
     sorted_urls = sorted(url_scores.items(), key=lambda x: x[1], reverse=True)
     

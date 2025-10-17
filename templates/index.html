@@ -36,6 +36,12 @@
     </div>
 
     <script>
+        let input = document.getElementById("searchInput").value;
+        let params = new URLSearchParams(document.location.search);
+        if(params.get('param')) {
+
+            search(params.get('param'))
+        }
 
         function escapeHtml(text) {
             const div = document.createElement('div');
@@ -43,15 +49,10 @@
             return div.innerHTML;
         }
 
-        async function searchInput(e) {
-            e.preventDefault();
-            document.getElementById("searchIcon").textContent = "⏳";
-            const input = document.getElementById("searchInput").value;
 
-            if (input.startsWith("http://") || input.startsWith("https://")) {
-                window.location.href = input;
-                return;
-            }
+        async function search(input) {
+
+            document.getElementById("searchIcon").textContent = "⏳";
 
             const response = await fetch("/search/" + encodeURIComponent(input), {
                 method: "GET"
@@ -81,7 +82,23 @@
                 </div>
             `).join('')}
         </div>`;
+        
         }
+
+        async function searchInput(e) {
+            e.preventDefault();
+            
+            
+
+            if (input.startsWith("http://") || input.startsWith("https://")) {
+                window.location.href = input;
+                return;
+            }
+
+            search(input)
+        }
+
+            
 
         function handleKeyPress(event) {
             if (event.key === 'Enter') {
