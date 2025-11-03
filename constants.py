@@ -62,3 +62,6 @@ first_urls = [
   "https://www.yelp.com",
   "https://www.tripadvisor.com"
 ]
+
+
+url_depth_penalty_coefficient = 1.5

@@ -21,7 +21,7 @@ port = 8080
 
 client = InferenceClient(
 provider="hf-inference",
-api_key="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"
+api_key="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"
 )
 
 urls_to_visit = read_from_csv("./csv/queue.csv")

@@ -3,7 +3,7 @@ import traceback
 import requests
 from utils.regex import extract_anchors, get_domain, reformat_html_tags
 from utils.misc import extract_keywords
-
+from constants import url_depth_penalty_coefficient
 from utils.data_handling import write_to_csv, manage_for_index, remove_from_csv, read_from_csv
 import json
 import urllib.parse
@@ -13,6 +13,12 @@ def summarize_content(content):
     print("Summarizing content...")
 
 def assign_importance(content, keyword, element_type):
+
+    #tf-idf
+
+    idf = content.lower().count(keyword.lower())
+    tf = len(keyword.split())
+    tf_idf = tf / (1 + idf)
 
     html_importance_map = {
         "title": 8,
@@ -27,9 +33,9 @@ def assign_importance(content, keyword, element_type):
         
     }
 
+    base_importance = html_importance_map.get(element_type, 1) * tf_idf
 
-    return html_importance_map.get(element_type, 1)
-
+    return base_importance
 
 
 def crawl(url, sleep_median, sleep_padding, domain_list, url_queue_list, new_url_list, url_list):
@@ -150,15 +156,18 @@ def search(term):
 
                 path = urllib.parse.urlparse(single_url).path
                 path = path.split('/')
+                subdomains = urllib.parse.urlparse(single_url).netloc.split('.')
+                subdomains = subdomains[:-2]  # Exclude main domain and TLD
                 path_length_penalty = len(path)
+                path_length_penalty += len(subdomains)
 
                 if single_url in url_scores:
 
-                    url_scores[single_url] = 2**value
+                    url_scores[single_url] += 2**value
                 else:
-                    url_scores[single_url] = value
+                    url_scores[single_url] = 2**value
 
-                url_scores[single_url] = url_scores[single_url] - path_length_penalty
+                url_scores[single_url] = url_scores[single_url] - path_length_penalty * url_depth_penalty_coefficient
 
     sorted_urls = sorted(url_scores.items(), key=lambda x: x[1], reverse=True)
     

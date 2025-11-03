@@ -36,7 +36,6 @@
     </div>
 
     <script>
-        let input = document.getElementById("searchInput").value;
         let params = new URLSearchParams(document.location.search);
         if(params.get('param')) {
 
@@ -87,6 +86,7 @@
 
         async function searchInput(e) {
             e.preventDefault();
+            const input = document.getElementById("searchInput").value;
             
             
 
