@@ -26,13 +26,13 @@ def remove_from_csv(file_path, data):
         writer = csv.writer(csvfile)
         writer.writerows(rows)
 
-def manage_for_index(url, keywords, importance):
+def manage_for_index(url, keywords, importances):
 
     with open('./csv/indexes.csv', 'r', newline='', encoding='utf-8') as csvfile:
         reader = csv.reader(csvfile)
         rows = list(reader)
 
-    for keyword in keywords:
+    for keyword, importance in zip(keywords, importances):
         found = False
         for row in rows:
             if row and len(row) > 0 and row[0] == keyword:  # Check if row is not empty!
@@ -50,3 +50,6 @@ def manage_for_index(url, keywords, importance):
         writer = csv.writer(csvfile)
         writer.writerows(rows)
 
+def is_url_visited(url):
+    urls = read_from_csv("./csv/urls.csv")
+    return any(row[0] == url for row in urls)

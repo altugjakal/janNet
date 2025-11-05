@@ -103,6 +103,7 @@ def searchRoute(term):
         })
 
     if contents:
+    
         summary = reasoner(term, contents, urls=results, client=client)
         return jsonify({
             'results': site_data,

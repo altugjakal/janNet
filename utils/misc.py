@@ -8,16 +8,26 @@ from nltk.corpus import stopwords
 
 stop_words = set(stopwords.words('english'))
 
+def clamp_search_term(term):
+    if len(term.split()) > 1:
+       #stick words side by side
+       terms = term.split()
+       alt_list = []
+       for term in terms:
+           term = term.strip()
+           alt_list.append(term + term[::-1])
+
+       return alt_list
+    else:
+        return []
+
 def extract_keywords(text):
-    
     stemmer = PorterStemmer()
-    
     words = re.findall(r'\b[a-zA-Z]+\b', text.lower())
-    
     filtered_words = [
         stemmer.stem(word) 
         for word in words 
-        if word not in stop_words and len(word) >= 3
+        if word not in stop_words
     ]
     
     return filtered_words

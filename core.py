@@ -1,40 +1,43 @@
+from math import log1p
 import time
 import traceback
 import requests
-from utils.regex import extract_anchors, get_domain, reformat_html_tags
-from utils.misc import extract_keywords
-from constants import url_depth_penalty_coefficient
+from utils.regex import extract_anchors, get_domain, reformat_html_tags, get_tld
+from utils.misc import extract_keywords, clamp_search_term
+import tldextract
 from utils.data_handling import write_to_csv, manage_for_index, remove_from_csv, read_from_csv
 import json
 import urllib.parse
 
 
-def summarize_content(content):
-    print("Summarizing content...")
+
 
 def assign_importance(content, keyword, element_type):
-
-    #tf-idf
-
-    idf = content.lower().count(keyword.lower())
-    tf = len(keyword.split())
-    tf_idf = tf / (1 + idf)
-
+    tf = content.lower().count(keyword.lower())
+    
+    keyword_specificity = len(keyword.split())
+    
+    tf_idf = (1 + tf) * keyword_specificity
+    
     html_importance_map = {
-        "title": 8,
-        "h1": 7,
-        "h2": 6,
-        "h3": 5,
-        "h4": 4,
-        "h5": 3,
-        "h6": 2,
-        "p": 1,
-        "description": 7
-        
+        "title": 10, 
+        "h1": 9,
+        "h2": 8,
+        "h3": 7,
+        "h4": 6,
+        "h5": 5,
+        "h6": 4,
+        "p": 2,
+        "description": 10,
+        "domain": 6,
+        "subdomain": 5,
+        "path": 4,
+        "param": 3
+
     }
-
+    
     base_importance = html_importance_map.get(element_type, 1) * tf_idf
-
+    
     return base_importance
 
 
@@ -99,7 +102,12 @@ def crawl(url, sleep_median, sleep_padding, domain_list, url_queue_list, new_url
 
 
 # Extract keywords from different HTML tags, get a proper extractor ERROR ABOUT INDEX IS HERE -fixed
+        url_obj = urllib.parse.urlparse(url)
 
+        domain = tldextract.extract(url).domain
+        paths = url_obj.path.split('/')
+        subdomains = url_obj.netloc.split('.')[:-2]
+        params = url_obj.params.split('&')
 
 #idiot you skipped anchor titles -thats not necesarry rn
         text_list = [
@@ -111,19 +119,35 @@ def crawl(url, sleep_median, sleep_padding, domain_list, url_queue_list, new_url
             (texts[5] if len(texts) > 0 else [], "h5"),      
             (texts[6] if len(texts) > 0 else [], "h6"),     
             (texts[7] if len(texts) > 0 else [], "p"),
-            (texts[8] if len(texts) > 0 else [], "description")
-            ]
+            (texts[8] if len(texts) > 0 else [], "description"),
+            ([domain] if domain else [], "domain"),
+            (subdomains if len(subdomains) > 0 else [], "subdomain"),
+            (paths if len(paths) > 0 else [], "path"),
+            (params if len(params) > 0 else [], "param")
+        ]
 
         for text_items, element_type in text_list:
             keywords = []
+            importances = []
 
             for text in text_items:
-                importance = assign_importance(content, text, element_type)
-                if text:    
-                    keywords += extract_keywords(text) #there is the issue
+                for word in extract_keywords(text):
+
+                    if word not in keywords:
+                        keywords.append(word)
+                        importance = assign_importance(text, word, element_type)
+                        importances.append(importance)
+                    else:
+                        old_word_index = keywords.index(word)
+                        old_importance = importances[old_word_index]
+                        new_importance = assign_importance(content, word, element_type)
+                        if new_importance > old_importance:
+                            importances[old_word_index] = new_importance
+                            print(f"Updated importance for '{word}' in {element_type}")
+
 
             if keywords:
-                manage_for_index(url=url, keywords=keywords, importance=importance)
+                manage_for_index(url=url, keywords=keywords, importances=importances)
 
              
 
@@ -131,7 +155,7 @@ def crawl(url, sleep_median, sleep_padding, domain_list, url_queue_list, new_url
     else:
         print(f"Could not find url: {url}")
 
-    time.sleep(sleep_median + (sleep_padding * (2 * (0.5 - time.time() % 1))))
+    time.sleep(sleep_median + (sleep_padding * ((0.5 - time.time() % 1))))
 
     return url_queue_list, domain_list, new_url_list
 
@@ -139,6 +163,7 @@ def crawl(url, sleep_median, sleep_padding, domain_list, url_queue_list, new_url
 def search(term):
     
     terms = extract_keywords(term)
+    terms += clamp_search_term(term)
 
     results = []
 
@@ -154,38 +179,60 @@ def search(term):
             
             for single_url, value in result_url.items():
 
-                path = urllib.parse.urlparse(single_url).path
-                path = path.split('/')
-                subdomains = urllib.parse.urlparse(single_url).netloc.split('.')
-                subdomains = subdomains[:-2]  # Exclude main domain and TLD
-                path_length_penalty = len(path)
-                path_length_penalty += len(subdomains)
+                url_obj = urllib.parse.urlparse(single_url)
+
+                paths = url_obj.path.split('/')
+                subdomains = url_obj.netloc.split('.')[:-2]
+                params = url_obj.params
+
+                path_depth = len(paths)
+                subdomain_depth = len(subdomains)
+                param_count = len(params.split('&'))
+
+                total_depth = path_depth + subdomain_depth + param_count
+
+                path_length_penalty = 1 / (1 + total_depth)  
+            
+
+                tld = get_tld(get_domain(single_url))
+                tld_popularity_penalty = 1.0 if tld in ['com', 'org', 'net'] else 0.7
+
+                #we pay our respects to web 1
+                tld_multiplier = 1.2 if tld == 'edu' else 1.0
+
+                base_score = log1p(value) * tld_popularity_penalty * path_length_penalty * tld_multiplier
+
 
                 if single_url in url_scores:
 
-                    url_scores[single_url] += 2**value
+                    url_scores[single_url] += base_score
                 else:
-                    url_scores[single_url] = 2**value
+                    url_scores[single_url] = base_score
 
-                url_scores[single_url] = url_scores[single_url] - path_length_penalty * url_depth_penalty_coefficient
 
     sorted_urls = sorted(url_scores.items(), key=lambda x: x[1], reverse=True)
     
 
 
     for url, score in sorted_urls:
-        if len(results) >= 5:
+        if len(results) >= 20:
             break
         results.append(url)
+
      
     print(f"Search for '{term}' yielded {len(results)} results.")
+    print("\nDebug - Sorted URLs and Scores:")
+    for url, score in sorted_urls:
+        print(f"{url}: {score:.2f}")
     return results
     
 
 def reasoner(query, contents, urls=None, client=None):
     if not contents:
         return "No content to analyze"
-    
+
+    query = 'revise the contents of the webpages, and form a concise summary answering the question from the perspective of a friendly assistant: ' + query
+
     cleaned_contents = []
     for content in contents[:5]:
         words = content.split()
@@ -201,7 +248,7 @@ def reasoner(query, contents, urls=None, client=None):
     try:
         result = client.summarization(
             combined[:800],  # Shorter to avoid timeout
-            model="google/pegasus-cnn_dailymail"  # Smaller, faster model
+            model="facebook/bart-large-cnn"
         )
         return result["summary_text"]
     except Exception as e:

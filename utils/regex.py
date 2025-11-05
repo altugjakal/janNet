@@ -5,8 +5,8 @@ import requests
 
 
 def reformat_html_tags(html_content):
-    
-    str = html_content #dont lover, site details uses orig case
+
+    str = html_content #dont lower, site details uses orig case
     title = re.findall(r'<title>(.*?)</title>', str)
     h1 = re.findall(r'<h1>(.*?)</h1>', str)
     h2 = re.findall(r'<h2>(.*?)</h2>', str)
@@ -15,8 +15,9 @@ def reformat_html_tags(html_content):
     h5 = re.findall(r'<h5>(.*?)</h5>', str)
     h6 = re.findall(r'<h6>(.*?)</h6>', str)
     p = re.findall(r'<p>(.*?)</p>', str)
-    desc = re.findall(r'<meta\s+name=["\']description["\']\s+content=["\'](.*?)["\']', str)
-
+    desc = re.findall(r'<meta\s+name=["\']description["\']\s+content=["\'](.*?)["\']', str, re.IGNORECASE)
+    desc += re.findall(r'<meta\s+content=["\'](.*?)["\']\s+name=["\']description["\']', str, re.IGNORECASE)
+    desc = desc[:1] 
 
     texts = [title, h1, h2, h3, h4, h5, h6, p, desc]
 
@@ -48,6 +49,12 @@ def get_domain(url):
     parsed_url = urlparse(url)
     domain = parsed_url.netloc
     return domain
+
+def get_tld(domain):
+    parts = domain.split('.')
+    if len(parts) >= 2:
+        return parts[-1]
+    return ''
 
 def sanitize_route(url):
     if url.endswith('/'):

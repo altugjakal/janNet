@@ -1,6 +1,10 @@
 
 
 first_urls = [
+    
+  "https://news.ycombinator.com",
+  
+
   #Search Engines & Directories
   "https://www.google.com",
   "https://www.bing.com",
@@ -11,7 +15,6 @@ first_urls = [
   #News Aggregators
   "https://news.google.com",
   "https://news.ycombinator.com",
-  "https://www.reddit.com",
   "https://www.digg.com",
   "https://slashdot.org",
   
@@ -19,6 +22,7 @@ first_urls = [
   "https://www.twitter.com",
   "https://www.facebook.com",
   "https://www.linkedin.com",
+  "https://www.reddit.com",
   "https://www.pinterest.com",
   "https://www.tumblr.com",
   
@@ -63,5 +67,3 @@ first_urls = [
   "https://www.tripadvisor.com"
 ]
 
-
-url_depth_penalty_coefficient = 1.5
