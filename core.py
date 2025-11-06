@@ -28,10 +28,10 @@ def assign_importance(content, keyword, element_type):
         "h5": 5,
         "h6": 4,
         "p": 2,
-        "description": 10,
-        "domain": 6,
-        "subdomain": 5,
-        "path": 4,
+        "description": 9,
+        "domain": 3,
+        "subdomain": 2,
+        "path": 2,
         "param": 3
 
     }
@@ -87,9 +87,17 @@ def crawl(url, sleep_median, sleep_padding, domain_list, url_queue_list, new_url
                     domain_list.append(get_domain(anchor))
                     write_to_csv("./csv/domains.csv", [get_domain(anchor)])
                 if anchor not in url_queue_list:
-                    url_queue_list.append(anchor)
-                    new_url_list.append(anchor)
-                    write_to_csv("./csv/queue.csv", [anchor])
+                    root_site_url = 'https://' + get_domain(anchor) 
+
+                    if root_site_url not in url_queue_list:
+                        url_queue_list.append(root_site_url)
+                        new_url_list.append(root_site_url)
+                        write_to_csv("./csv/queue.csv", [root_site_url])
+                    
+                    else:
+                        url_queue_list.append(anchor)
+                        new_url_list.append(anchor)
+                        write_to_csv("./csv/queue.csv", [anchor])
 
         
         
@@ -141,9 +149,9 @@ def crawl(url, sleep_median, sleep_padding, domain_list, url_queue_list, new_url
                         old_word_index = keywords.index(word)
                         old_importance = importances[old_word_index]
                         new_importance = assign_importance(content, word, element_type)
-                        if new_importance > old_importance:
-                            importances[old_word_index] = new_importance
-                            print(f"Updated importance for '{word}' in {element_type}")
+                        even_newer_importance = old_importance + new_importance
+                        importances[old_word_index] = even_newer_importance
+                        print(f"Updated importance for '{word}' in {element_type}")
 
 
             if keywords:
@@ -161,9 +169,10 @@ def crawl(url, sleep_median, sleep_padding, domain_list, url_queue_list, new_url
 
 
 def search(term):
-    
+
     terms = extract_keywords(term)
     terms += clamp_search_term(term)
+    
 
     results = []
 

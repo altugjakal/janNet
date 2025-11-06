@@ -26,7 +26,7 @@ def remove_from_csv(file_path, data):
         writer = csv.writer(csvfile)
         writer.writerows(rows)
 
-def manage_for_index(url, keywords, importances):
+def manage_for_index(url, keywords, importances): #duplicates should add up importance
 
     with open('./csv/indexes.csv', 'r', newline='', encoding='utf-8') as csvfile:
         reader = csv.reader(csvfile)
