@@ -24,10 +24,12 @@ def clamp_search_term(term):
 def extract_keywords(text):
     stemmer = PorterStemmer()
     words = re.findall(r'\b[a-zA-Z]+\b', text.lower())
+    
     filtered_words = [
         stemmer.stem(word) 
         for word in words 
         if word not in stop_words
+
     ]
     
     return filtered_words

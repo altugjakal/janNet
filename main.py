@@ -1,6 +1,6 @@
 import requests
 from utils.regex import reformat_html_tags, extract_anchors, get_domain
-from utils.data_handling import remove_from_csv, write_to_csv, read_from_csv
+from utils.data_handling import *
 import time 
 from utils.data_handling import manage_for_index
 import re
@@ -8,7 +8,7 @@ import json
 from utils.misc import extract_keywords, site_details
 from flask import Flask
 from flask import render_template, jsonify
-from core import crawl, search, reasoner
+from core import crawl, search
 from huggingface_hub import InferenceClient
 import threading
 import traceback
@@ -19,14 +19,13 @@ app = Flask(__name__)
 host = 'localhost'
 port = 8080
 
-client = InferenceClient(
-provider="hf-inference",
-api_key="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"
-)
+initialize_database()
 
-urls_to_visit = read_from_csv("./csv/queue.csv")
-visited_urls = read_from_csv("./csv/urls.csv")
-stored_domains = read_from_csv("./csv/domains.csv")
+
+urls_to_visit = get_queue()
+visited_urls = get_all_urls()
+stored_domains = get_domains()
+
 
 
 
@@ -43,22 +42,11 @@ domain_list = [row[0] for row in stored_domains] if stored_domains else [get_dom
 
 
 
-    
-
-
 
 def main():
     
     global url_queue_list, domain_list, new_url_list, url_list, visited_urls
 
-    print("Starting crawler...")
-    print('Want to add new url to starting batch? (y/n): ')
-    add_url = input()
-    if add_url.lower() == 'y':
-        new_url = input('Enter the new URL: ')
-        url_queue_list.append(new_url)
-        write_to_csv("./csv/queue.csv", new_url)
-        print(f"Added {new_url} to the queue.")
 
     for url in url_queue_list:
         if url in url_list:
@@ -102,18 +90,11 @@ def searchRoute(term):
 
         })
 
-    if contents:
-    
-        summary = reasoner(term, contents, urls=results, client=client)
-        return jsonify({
-            'results': site_data,
-            'summary': summary
-        })
 
-    else: 
-        return jsonify({
-            'results': site_data
-        })
+
+    return jsonify({
+        'results': site_data
+    })
 
 
 @app.route("/")
