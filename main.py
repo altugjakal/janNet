@@ -1,15 +1,11 @@
-import requests
-from utils.regex import reformat_html_tags, extract_anchors, get_domain
+from utils.regex import get_domain
 from utils.data_handling import *
-import time 
-from utils.data_handling import manage_for_index
-import re
-import json
-from utils.misc import extract_keywords, site_details
+import time
+from utils.misc import site_details
 from flask import Flask
 from flask import render_template, jsonify
-from core import crawl, search
-from huggingface_hub import InferenceClient
+from core.crawl import crawl
+from core.search import search
 import threading
 import traceback
 from constants import first_urls
