@@ -24,7 +24,7 @@
   </component>
   <component name="DBNavigator.Project.DatabaseConsoleManager">
     <connection id="a144cca4-ee15-4ba3-8344-797dd6f8fa3a">
-      <console name="Jannet 1" type="STANDARD" schema="" session="Main"><![CDATA[SELECT * FROM queue]]></console>
+      <console name="Jannet 1" type="STANDARD" schema="" session="Pool"><![CDATA[SELECT * FROM urls]]></console>
     </connection>
   </component>
   <component name="DBNavigator.Project.DatabaseEditorStateManager">

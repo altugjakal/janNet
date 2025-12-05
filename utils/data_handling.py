@@ -1,23 +1,33 @@
 import sqlite3
 from contextlib import contextmanager
 from datetime import datetime
+import numpy as np
+from utils.misc import cosine_similarity
+
+
 
 
 @contextmanager
 def open_db(db_path='db/jannet1.db'):
+
     conn = sqlite3.connect(db_path)
     try:
+
         yield conn
     finally:
         conn.close()
 
 
 def initialize_database(db_path='db/jannet1.db'):
-    """Run this once to create tables"""
+
     with open_db(db_path) as conn:
         c = conn.cursor()
 
-        # URLs table
+
+
+
+
+
         c.execute('''CREATE TABLE IF NOT EXISTS urls
                      (url TEXT PRIMARY KEY,
                       crawled_at TIMESTAMP NOT NULL default CURRENT_TIMESTAMP)''')
@@ -38,6 +48,13 @@ def initialize_database(db_path='db/jannet1.db'):
                       url TEXT,
                       importance REAL,
                       PRIMARY KEY (keyword, url))''')
+
+        c.execute('''CREATE TABLE IF NOT EXISTS vector_index (
+            embedding_id INTEGER NOT NULL,
+            url TEXT,
+            created_at TEXT NOT NULL default CURRENT_TIMESTAMP,
+            PRIMARY KEY (embedding_id, url))'''
+            )
 
         # Create indexes for fast lookups
         c.execute('CREATE INDEX IF NOT EXISTS idx_keyword ON keyword_index(keyword)')
@@ -115,9 +132,29 @@ def get_domains(db_path='db/jannet1.db'):
         c.execute('''SELECT domain FROM domains''')
         return c.fetchall()
 
+def manage_vector_for_index(url, emb_id, db_path='db/jannet1.db'):
+    with open_db(db_path) as conn:
+        c = conn.cursor()
+        c.execute('''INSERT INTO vector_index (embedding_id,
+                url) VALUES (?, ?)''', (emb_id, url))
+        conn.commit()
+
+def get_url_by_vector_id(vector_id, db_path='db/jannet1.db'):
+    with open_db(db_path) as conn:
+        c = conn.cursor()
+        c.execute('''SELECT url FROM vector_index WHERE embedding_id = ?''', (vector_id,))
+        result = c.fetchone()
+
+        if result:
+            return result[0]
+        else:
+            return None
+
+
+
+
 
 def manage_for_index(url, pairs, db_path='db/jannet1.db'):
-    """Insert or update keyword importance values for a given URL."""
     with open_db(db_path) as conn:
         c = conn.cursor()
 
@@ -136,6 +173,7 @@ def manage_for_index(url, pairs, db_path='db/jannet1.db'):
         conn.commit()
 
 
+
 def search_index(keywords, db_path='db/jannet1.db'):
     with open_db(db_path) as conn:
         c = conn.cursor()
@@ -149,3 +187,62 @@ def search_index(keywords, db_path='db/jannet1.db'):
                 url_scores[url] = url_scores.get(url, 0.0) + importance
 
         return url_scores
+
+#below this line is the vector db
+
+def initialize_vector_database(db_path='db/live1.db'):
+
+    with open_db(db_path) as conn:
+        c = conn.cursor()
+
+        c.execute('''CREATE TABLE IF NOT EXISTS vectors
+                     (id INT PRIMARY KEY,
+                      dtype TEXT NOT NULL,
+                      vector BLOB NOT NULL)''')
+
+
+        conn.commit()
+
+def add_vector(vector, id):
+    with open_db(db_path='db/live1.db') as conn:
+        vector = np.array(vector)
+        new_vector = vector.tobytes()
+        c = conn.cursor()
+
+        c.execute('''INSERT INTO vectors (id, vector, dtype) VALUES (?, ?, ?)''', (id, new_vector, str(vector.dtype)))
+
+        conn.commit()
+
+def delete_vector(id):
+    with open_db(db_path='db/live1.db') as conn:
+        c = conn.cursor()
+        c.execute('''DELETE FROM vectors WHERE id = ?''', (id,))
+        conn.commit()
+
+def get_vector(id):
+    with open_db(db_path='db/live1.db') as conn:
+        c = conn.cursor()
+        c.execute('''SELECT vector FROM vectors WHERE id = ?''', (id,))
+        vector = c.fetchone()
+        return vector
+
+def cosine_similarity_vectors(input_vector):
+    with open_db(db_path='db/live1.db') as conn:
+        res_map = {}
+        c = conn.cursor()
+        c.execute('''SELECT vector, id, dtype FROM vectors''')
+
+        results = c.fetchall()
+        for vector, id, dtype in results:
+
+            if not isinstance(vector, bytes):
+                raise TypeError(f"Expected bytes, got {type(vector)} for id {id}")
+
+
+            vector = np.frombuffer(vector, dtype=dtype).reshape(384, 1).flatten()
+            cosine = cosine_similarity(vector, input_vector).flatten()
+            res_map[id] = float(cosine)
+
+
+        sorted_dict = sorted(res_map.items(), key=lambda x: x[1], reverse=True)
+        return sorted_dict

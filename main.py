@@ -1,21 +1,24 @@
 from utils.regex import get_domain
 from utils.data_handling import *
 import time
-from utils.misc import site_details
 from flask import Flask
-from flask import render_template, jsonify
 from core.crawl import crawl
-from core.search import search
 import threading
 import traceback
 from constants import first_urls
+from api.routes.search import search_bp
+from api.routes.markup import markup_bp
 
 app = Flask(__name__)
+app.register_blueprint(search_bp, url_prefix='/search')
+app.register_blueprint(markup_bp, url_prefix='/')
 
 host = 'localhost'
-port = 8080
+port = 5004
 
+initialize_vector_database()
 initialize_database()
+
 
 
 urls_to_visit = get_queue()
@@ -33,16 +36,9 @@ new_url_list = []
 domain_list = [row[0] for row in stored_domains] if stored_domains else [get_domain(url) for url in first_items]
 
 
-
-
-
-
-
-
 def main():
     
     global url_queue_list, domain_list, new_url_list, url_list, visited_urls
-
 
     for url in url_queue_list:
         if url in url_list:
@@ -58,44 +54,6 @@ def main():
     print(f"Total unique URLs found: {len(url_list)}")
     print(f"Total unique domains found: {len(domain_list)}")
 
-
-
-
-@app.route("/search/<term>")
-def searchRoute(term):
-    
-     #keep here indexes are always updated
-    results = search(term)
-    site_data  = []
-    contents = []
-
-    
-    
-
-    for result in results:
-        title, description, content = site_details(result)
-        contents.append(content)
-
-
-        site_data.append({
-            'url': result,
-            'title': title,
-            'description': description,
-            'domain': get_domain(result),
-            'favicon': f"https://www.google.com/s2/favicons?domain={get_domain(result)}"
-
-        })
-
-
-
-    return jsonify({
-        'results': site_data
-    })
-
-
-@app.route("/")
-def index():
-    return render_template("index.html")
 
 
 if __name__ == "__main__":

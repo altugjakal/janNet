@@ -5,6 +5,7 @@ import time
 from constants import html_importance_map
 import requests
 
+from core.vectordb.vectordb import VectorDB
 from utils.regex import extract_anchors, get_domain, reformat_html_tags
 from utils.misc import extract_keywords
 import tldextract
@@ -35,7 +36,7 @@ def assign_importance(content, keyword, element_type):
 
 def crawl(url, sleep_median, sleep_padding, domain_list, url_queue_list, new_url_list, url_list):
 
-
+    db = VectorDB()
 
     if url not in url_list:
             url_list.append(url)
@@ -63,7 +64,8 @@ def crawl(url, sleep_median, sleep_padding, domain_list, url_queue_list, new_url
 
     if response.status_code == 200:
         content = response.text
-        
+
+
         anchors = extract_anchors(content)
 
         
@@ -95,6 +97,12 @@ def crawl(url, sleep_median, sleep_padding, domain_list, url_queue_list, new_url
 
         print(f"Found {len(anchors)} anchors ({len(url_queue_list)} urls in store, {len(domain_list)} domains in store)")
         content, texts = reformat_html_tags(content)
+
+
+        vector = db.text_vectoriser(content)
+        id = np.random.randint(9999)
+        db.insert(vector=vector, id=id)
+        manage_vector_for_index(url= url, emb_id=id)
 
 
 # Extract keywords from different HTML tags, get a proper extractor ERROR ABOUT INDEX IS HERE -fixed

@@ -4,9 +4,13 @@ from utils.regex import reformat_html_tags
 
 from nltk.stem import PorterStemmer
 from nltk.corpus import stopwords
+from sentence_transformers import SentenceTransformer
+import numpy as np
 
 
 stop_words = set(stopwords.words('english'))
+
+
 
 def clamp_search_term(term):
     if len(term.split()) > 1:
@@ -52,3 +56,20 @@ def site_details(url):
         return title, description, reformatted_content
     else:
         return "No title available", "No description available", "No content available"
+
+
+#below this line is the vectordb misc tools
+
+def cosine_similarity(vector1, vector2):
+    vector1 = vector1.flatten()
+    vector2 = vector2.flatten()
+    similarity = np.dot(vector1, vector2) / (np.linalg.norm(vector1) * np.linalg.norm(vector2))
+
+
+    return similarity
+
+def vectorise_text(text):
+    model = SentenceTransformer('all-MiniLM-L6-v2')
+    vectors = []
+    return model.encode(text)
+
