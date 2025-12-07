@@ -6,6 +6,9 @@ from nltk.stem import PorterStemmer
 from nltk.corpus import stopwords
 from sentence_transformers import SentenceTransformer
 import numpy as np
+import urllib.parse
+from utils.regex import get_tld, get_domain
+from math import log1p
 
 
 stop_words = set(stopwords.words('english'))
@@ -73,3 +76,27 @@ def vectorise_text(text):
     vectors = []
     return model.encode(text)
 
+def rank(url, score):
+    url_obj = urllib.parse.urlparse(url)
+    importance = score
+
+    paths = [p for p in url_obj.path.split('/') if p]
+    subdomains = url_obj.netloc.split('.')[:-2]
+    params = url_obj.query.split('&') if url_obj.query else []
+
+    path_depth = len(paths)
+    param_count = len(params)
+    subdomain_count = len(subdomains)
+
+    total_depth = path_depth + param_count + subdomain_count
+
+    path_length_penalty = 1 / (1 + total_depth * 0.3)
+
+    tld = get_tld(get_domain(url))
+    tld_popularity_penalty = 1.0 if tld in ['com', 'org', 'net'] else 0.7
+
+    # we pay our respects to web 1
+    tld_multiplier = 1.2 if tld == 'edu' else 1.0
+
+    base_score = log1p(importance) * tld_popularity_penalty * path_length_penalty * tld_multiplier
+    return base_score

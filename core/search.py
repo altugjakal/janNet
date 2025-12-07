@@ -2,7 +2,7 @@ import urllib.parse
 from utils.regex import get_domain, get_tld
 from utils.misc import extract_keywords, clamp_search_term
 from utils.data_handling import *
-from math import log1p
+from utils.misc import rank
 
 
 
@@ -19,29 +19,7 @@ def search(term):
 
     for url, importance in initials.items():
 
-        url_obj = urllib.parse.urlparse(url)
-
-        paths = [p for p in url_obj.path.split('/') if p]
-        subdomains = url_obj.netloc.split('.')[:-2]
-        params = url_obj.query.split('&') if url_obj.query else []
-
-        path_depth = len(paths)
-        param_count = len(params)
-        subdomain_count = len(subdomains)
-
-        total_depth = path_depth + param_count + subdomain_count
-
-        path_length_penalty = 1 / (1 + total_depth)
-
-        print('path_depth for url' + url + str(path_length_penalty))
-
-        tld = get_tld(get_domain(url))
-        tld_popularity_penalty = 1.0 if tld in ['com', 'org', 'net'] else 0.7
-
-        # we pay our respects to web 1
-        tld_multiplier = 1.2 if tld == 'edu' else 1.0
-
-        base_score = log1p(importance) * tld_popularity_penalty * path_length_penalty * tld_multiplier
+        base_score = rank(url, importance)
 
         if url in url_scores:
 
@@ -55,7 +33,7 @@ def search(term):
 
     for url, score in sorted_urls:
 
-        if len(results) >= 20:
+        if len(results) >= 5:
             break
         results.append(url)
 

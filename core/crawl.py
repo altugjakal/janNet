@@ -10,7 +10,7 @@ from utils.regex import extract_anchors, get_domain, reformat_html_tags
 from utils.misc import extract_keywords
 import tldextract
 from utils.data_handling import *
-import urllib.parse
+from urllib.parse import urljoin, urlparse
 
 
 
@@ -74,20 +74,27 @@ def crawl(url, sleep_median, sleep_padding, domain_list, url_queue_list, new_url
             drop_from_queue(url)
 
         for anchor in anchors:
-            if not anchor.startswith("https"):
+            # Convert relative URLs to absolute URLs
+            absolute_url = urljoin(url, anchor)
+
+            # Skip non-http protocols like mailto:, javascript:, etc.
+            if not absolute_url.startswith(("http://", "https://")):
                 continue
 
 
+            absolute_url = absolute_url.rstrip("/")
+
             # Track domain
-            domain = get_domain(anchor)
+            domain = get_domain(absolute_url)
             if domain not in domain_list:
                 domain_list.append(domain)
 
-
             # Add URL to queue (avoid duplicates)
-            if anchor not in url_queue_list and anchor not in url_list:
-                new_url_list.append(anchor)
-                url_queue_list.append(anchor)
+            if absolute_url not in url_queue_list and absolute_url not in url_list:
+                new_url_list.append(absolute_url)
+                url_queue_list.append(absolute_url)
+
+
 
         
         
@@ -106,7 +113,7 @@ def crawl(url, sleep_median, sleep_padding, domain_list, url_queue_list, new_url
 
 
 # Extract keywords from different HTML tags, get a proper extractor ERROR ABOUT INDEX IS HERE -fixed
-        url_obj = urllib.parse.urlparse(url)
+        url_obj = urlparse(url)
 
         domain = tldextract.extract(url).domain
         paths = [p for p in url_obj.path.split('/') if p]
