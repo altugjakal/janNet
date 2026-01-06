@@ -27,18 +27,11 @@ def search(term):
         else:
             url_scores[url] = base_score
 
-    sorted_urls = sorted(url_scores.items(), key=lambda x: x[1], reverse=True)
+    
 
-    # test
-
-    for url, score in sorted_urls:
-
-        if len(results) >= 5:
-            break
-        results.append(url)
+    
 
     print(f"Search for '{term}' yielded {len(results)} results.")
     print("\nDebug - Sorted URLs and Scores:")
-    for url, score in sorted_urls:
-        print(f"{url}: {score:.2f}")
-    return results
+
+    return url_scores

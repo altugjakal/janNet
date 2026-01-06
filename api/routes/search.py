@@ -3,7 +3,7 @@ from core.search import search
 from utils.regex import  get_domain
 from flask import jsonify, Blueprint
 from utils.misc import site_details
-from core.v_search import vector_search
+from core.hybrid import hybrid
 
 
 search_bp = Blueprint('search_bp', __name__)
@@ -11,7 +11,7 @@ search_bp = Blueprint('search_bp', __name__)
 @search_bp.route("/<term>")
 def search_route(term):
     # keep here indexes are always updated
-    results = vector_search(term)
+    results = hybrid(term)
     site_data = []
     contents = []
 

@@ -226,23 +226,17 @@ def get_vector(id):
         vector = c.fetchone()
         return vector
 
-def cosine_similarity_vectors(input_vector):
+def cosine_similarity_vectors(input_vector, top_k=50):
     with open_db(db_path='db/live1.db') as conn:
         res_map = {}
         c = conn.cursor()
         c.execute('''SELECT vector, id, dtype FROM vectors''')
-
         results = c.fetchall()
         for vector, id, dtype in results:
-
             if not isinstance(vector, bytes):
                 raise TypeError(f"Expected bytes, got {type(vector)} for id {id}")
-
-
             vector = np.frombuffer(vector, dtype=dtype).reshape(384, 1).flatten()
             cosine = cosine_similarity(vector, input_vector).flatten()
-            res_map[id] = float(cosine)
-
-
+            res_map[id] = float(cosine[0])
         sorted_dict = sorted(res_map.items(), key=lambda x: x[1], reverse=True)
-        return sorted_dict
+        return sorted_dict[:top_k]

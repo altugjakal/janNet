@@ -34,9 +34,10 @@ def assign_importance(content, keyword, element_type):
     return base_importance
 
 
-def crawl(url, sleep_median, sleep_padding, domain_list, url_queue_list, new_url_list, url_list):
+def crawl(url, sleep_median, sleep_padding, domain_list, url_queue_list, new_url_list, url_list, db=None):
 
-    db = VectorDB()
+    if db is None:
+        db = VectorDB()
 
     if url not in url_list:
             url_list.append(url)

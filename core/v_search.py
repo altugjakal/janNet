@@ -21,16 +21,9 @@ def vector_search(term):
 
         url_scores[url] = score
 
-    sorted_urls = sorted(url_scores.items(), key=lambda x: x[1], reverse=True)
 
-    # test
+    
 
-    for url, score in sorted_urls:
-
-        if len(results) >= 5:
-            break
-        results.append(url)
-
-    return results
+    return url_scores
 
 

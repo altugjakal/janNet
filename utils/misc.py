@@ -90,13 +90,18 @@ def rank(url, score):
 
     total_depth = path_depth + param_count + subdomain_count
 
-    path_length_penalty = 1 / (1 + total_depth * 0.3)
+    path_length_penalty = 1 / (1 + total_depth * 0.15)
 
-    tld = get_tld(get_domain(url))
-    tld_popularity_penalty = 1.0 if tld in ['com', 'org', 'net'] else 0.7
+    domain = get_domain(url)
+    tld = get_tld(domain)
+    if tld in ['edu']:
+        tld_multiplier = 2.0  
+    elif tld in ['ac', 'edu.au', 'edu.cn'] or domain.endswith('.ac.uk'):
+        tld_multiplier = 2.0  
+    elif tld in ['com', 'org', 'net']:
+        tld_multiplier = 1.0 
+    else:
+        tld_multiplier = 0.7
 
-    # we pay our respects to web 1
-    tld_multiplier = 1.2 if tld == 'edu' else 1.0
-
-    base_score = log1p(importance) * tld_popularity_penalty * path_length_penalty * tld_multiplier
+    base_score = log1p(importance) * path_length_penalty * tld_multiplier
     return base_score
