@@ -30,7 +30,6 @@ stored_domains = get_domains()
 
 first_items = first_urls.copy()
 visited_urls = [row[0] for row in visited_urls] if visited_urls else []
-url_list = visited_urls
 url_queue_list = [row[0] for row in urls_to_visit] if urls_to_visit else first_items
 new_url_list = []
 domain_list = [row[0] for row in stored_domains] if stored_domains else [get_domain(url) for url in first_items]
@@ -41,18 +40,18 @@ def main():
     global url_queue_list, domain_list, new_url_list, url_list, visited_urls
 
     for url in url_queue_list:
-        if url in url_list:
+        if url in visited_urls:
             continue
         try:
-            url_queue_list, domain_list, new_url_list = crawl(url, sleep_median=3, sleep_padding=1, domain_list=domain_list, url_queue_list=url_queue_list, new_url_list=new_url_list, url_list=url_list)
+            crawl(url, sleep_median=3, sleep_padding=1, url_queue_list=url_queue_list)
+            url_queue_list = get_queue()
+            visited_urls = get_all_urls()
+            
         except Exception as e:
             traceback.print_exc()
             continue
 
-
-
-    print(f"Total unique URLs found: {len(url_list)}")
-    print(f"Total unique domains found: {len(domain_list)}")
+    
 
 
 

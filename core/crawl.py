@@ -34,17 +34,14 @@ def assign_importance(content, keyword, element_type):
     return base_importance
 
 
-def crawl(url, sleep_median, sleep_padding, domain_list, url_queue_list, new_url_list, url_list, db=None):
+def crawl(url, sleep_median, sleep_padding, url_queue_list, db=None):
 
     if db is None:
         db = VectorDB()
 
-    if url not in url_list:
-            url_list.append(url)
-            add_url(url)
-    else:
-            print('Already in list')
-            return url_queue_list, domain_list, new_url_list
+    
+    add_url(url)
+
 
     headers = {
         'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
@@ -61,7 +58,6 @@ def crawl(url, sleep_median, sleep_padding, domain_list, url_queue_list, new_url
         response = requests.get(url, headers=headers, timeout=10, allow_redirects=True)
     except requests.RequestException as e:
         print(f"Request failed for {url}")
-        return url_queue_list, domain_list, new_url_list
 
     if response.status_code == 200:
         content = response.text
@@ -71,7 +67,7 @@ def crawl(url, sleep_median, sleep_padding, domain_list, url_queue_list, new_url
 
         
         if url in url_queue_list:
-            url_queue_list.remove(url)
+            
             drop_from_queue(url)
 
         for anchor in anchors:
@@ -86,14 +82,11 @@ def crawl(url, sleep_median, sleep_padding, domain_list, url_queue_list, new_url
             absolute_url = absolute_url.rstrip("/")
 
             # Track domain
-            domain = get_domain(absolute_url)
-            if domain not in domain_list:
-                domain_list.append(domain)
+            
 
             # Add URL to queue (avoid duplicates)
-            if absolute_url not in url_queue_list and absolute_url not in url_list:
-                new_url_list.append(absolute_url)
-                url_queue_list.append(absolute_url)
+           
+            add_url(url)
 
 
 
@@ -103,7 +96,6 @@ def crawl(url, sleep_median, sleep_padding, domain_list, url_queue_list, new_url
             
         
 
-        print(f"Found {len(anchors)} anchors ({len(url_queue_list)} urls in store, {len(domain_list)} domains in store)")
         content, texts = reformat_html_tags(content)
 
 
@@ -161,7 +153,6 @@ def crawl(url, sleep_median, sleep_padding, domain_list, url_queue_list, new_url
 
     time.sleep(sleep_median + random.uniform(-sleep_padding, sleep_padding))
 
-    return url_queue_list, domain_list, new_url_list
 
 
 
