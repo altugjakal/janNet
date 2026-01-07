@@ -1,4 +1,6 @@
+from core.vectordb.vectordb import VectorDB
 from utils.regex import get_domain
+
 from utils.data_handling import *
 import time
 from flask import Flask
@@ -19,37 +21,46 @@ port = 5004
 initialize_vector_database()
 initialize_database()
 
+crawler_running = True
+MAX_CRAWLS = 1000
+db = VectorDB()
 
 
-urls_to_visit = get_queue()
-visited_urls = get_all_urls()
-stored_domains = get_domains()
-
-
-
-
-first_items = first_urls.copy()
-visited_urls = [row[0] for row in visited_urls] if visited_urls else []
-url_queue_list = [row[0] for row in urls_to_visit] if urls_to_visit else first_items
-new_url_list = []
-domain_list = [row[0] for row in stored_domains] if stored_domains else [get_domain(url) for url in first_items]
 
 
 def main():
-    
-    global url_queue_list, domain_list, new_url_list, url_list, visited_urls
+    global crawler_running, MAX_CRAWLS, db
 
-    for url in url_queue_list:
-        if url in visited_urls:
+    if get_queue_size() == 0:
+        add_to_queue_batch(first_urls)
+
+    crawl_count = 0
+
+
+
+    while crawler_running and crawl_count < MAX_CRAWLS:
+        queue = get_queue()
+
+        if not queue:
+            print("Queue empty!")
+            break
+
+        url = queue[0][0]
+
+        if is_url_visited(url):
+            drop_from_queue(url)
+            continue
+
+        if url in get_all_urls():
             continue
         try:
-            crawl(url, sleep_median=3, sleep_padding=1, url_queue_list=url_queue_list)
-            url_queue_list = get_queue()
-            visited_urls = get_all_urls()
-            
+            crawl(url, sleep_median=3, sleep_padding=1, db=db)
+
         except Exception as e:
             traceback.print_exc()
             continue
+
+        crawl_count += 1
 
     
 

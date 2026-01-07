@@ -1,10 +1,12 @@
 import re
 import requests
+
+from core.model_manager import get_model
 from utils.regex import reformat_html_tags
 
 from nltk.stem import PorterStemmer
 from nltk.corpus import stopwords
-from sentence_transformers import SentenceTransformer
+from core.model_manager import get_model
 import numpy as np
 import urllib.parse
 from utils.regex import get_tld, get_domain
@@ -72,7 +74,7 @@ def cosine_similarity(vector1, vector2):
     return similarity
 
 def vectorise_text(text):
-    model = SentenceTransformer('all-MiniLM-L6-v2')
+    model = get_model()
     vectors = []
     return model.encode(text)
 

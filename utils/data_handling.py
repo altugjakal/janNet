@@ -89,7 +89,21 @@ def add_to_queue(url, db_path='db/jannet1.db'):
         c = conn.cursor()
         c.execute('''INSERT OR IGNORE INTO queue (url, added_at) VALUES (?, ?)''', (url, datetime.now()))
         conn.commit()
+def add_to_queue_batch(urls, db_path='db/jannet1.db'):
+    with open_db(db_path) as conn:
+        c = conn.cursor()
+        c.executemany(
+            '''INSERT OR IGNORE INTO queue (url, added_at) VALUES (?, ?)''',
+            [(url, datetime.now()) for url in urls]
+        )
+        conn.commit()
 
+def get_queue_size(db_path='db/jannet1.db'):
+    """Get current queue size"""
+    with open_db(db_path) as conn:
+        c = conn.cursor()
+        c.execute('''SELECT COUNT(*) FROM queue''')
+        return c.fetchone()[0]
 
 def drop_from_queue(url, db_path='db/jannet1.db'):
     with open_db(db_path) as conn:
@@ -108,7 +122,7 @@ def is_in_queue(url, db_path='db/jannet1.db'):
 def get_queue(db_path='db/jannet1.db'):
     with open_db(db_path) as conn:
         c = conn.cursor()
-        c.execute('''SELECT url FROM queue''')
+        c.execute('''SELECT url FROM queue ORDER BY added_at ASC''')
         return c.fetchall()
 
 
@@ -158,19 +172,38 @@ def manage_for_index(url, pairs, db_path='db/jannet1.db'):
     with open_db(db_path) as conn:
         c = conn.cursor()
 
+        updates = []
+        inserts = []
+
         for keyword, importance in pairs.items():
             c.execute('''SELECT importance FROM keyword_index WHERE keyword = ? AND url = ?''', (keyword, url))
-            results = c.fetchall()
+            result = c.fetchone()
 
-            if results:
-                new_importance = results[0][0] + importance
-                c.execute('''UPDATE keyword_index SET importance = ? WHERE keyword = ? AND url = ?''',
-                          (new_importance, keyword, url))
+
+
+
+            if result:
+                new_importance = float(result[0]) + float(importance)
+                updates.append((new_importance, keyword, url))
+
             else:
-                c.execute('INSERT INTO keyword_index (keyword, url, importance) VALUES (?, ?, ?)',
-                          (keyword, url, importance))
+                inserts.append((keyword, url, float(importance)))
+
+        if updates:
+                c.executemany(
+                    '''UPDATE keyword_index SET importance = ? WHERE keyword = ? AND url = ?''',
+                    updates
+                )
+        if inserts:
+                c.executemany(
+                    '''INSERT INTO keyword_index (keyword, url, importance) VALUES (?, ?, ?)''',
+                    inserts
+                )
 
         conn.commit()
+
+
+
 
 
 

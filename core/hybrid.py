@@ -1,7 +1,7 @@
 from core.v_search import vector_search
 from core.search import search
 
-def hybrid(term, vector_weight=0.4, kw_weight=0.6, return_limit=5):
+def hybrid(term,  vector_weight=0.4, kw_weight=0.6, return_limit=5):
 
 
     keyword_scores = search(term)
