@@ -1,39 +1,43 @@
 from urllib.parse import urlparse
 import re
-import requests
+import html
 
 
 
 def reformat_html_tags(html_content):
-    html = html_content
 
-    title = re.findall(r'<title[^>]*>(.*?)</title>', html, re.IGNORECASE | re.DOTALL)
-    title += re.findall(r'<meta[^>]*property=["\']og:title["\'][^>]*content=["\']([^"\']*)["\']', html, re.IGNORECASE)
-    title += re.findall(r'<meta[^>]*content=["\']([^"\']*)["\'][^>]*property=["\']og:title["\']', html, re.IGNORECASE)
-    title += re.findall(r'<meta[^>]*name=["\']twitter:title["\'][^>]*content=["\']([^"\']*)["\']', html, re.IGNORECASE)
-    title += re.findall(r'<meta[^>]*content=["\']([^"\']*)["\'][^>]*name=["\']twitter:title["\']', html, re.IGNORECASE)
+    html_content = html.unescape(html_content)
 
-    h1 = re.findall(r'<h1[^>]*>(.*?)</h1>', html, re.IGNORECASE | re.DOTALL)
-    h2 = re.findall(r'<h2[^>]*>(.*?)</h2>', html, re.IGNORECASE | re.DOTALL)
-    h3 = re.findall(r'<h3[^>]*>(.*?)</h3>', html, re.IGNORECASE | re.DOTALL)
-    h4 = re.findall(r'<h4[^>]*>(.*?)</h4>', html, re.IGNORECASE | re.DOTALL)
-    h5 = re.findall(r'<h5[^>]*>(.*?)</h5>', html, re.IGNORECASE | re.DOTALL)
-    h6 = re.findall(r'<h6[^>]*>(.*?)</h6>', html, re.IGNORECASE | re.DOTALL)
-    p  = re.findall(r'<p[^>]*>(.*?)</p>', html, re.IGNORECASE | re.DOTALL)
+
+    emails = re.findall(r'[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}', html_content)
+
+    title = re.findall(r'<title[^>]*>(.*?)</title>', html_content, re.IGNORECASE | re.DOTALL)
+    title += re.findall(r'<meta[^>]*property=["\']og:title["\'][^>]*content=["\']([^"\']*)["\']', html_content, re.IGNORECASE)
+    title += re.findall(r'<meta[^>]*content=["\']([^"\']*)["\'][^>]*property=["\']og:title["\']', html_content, re.IGNORECASE)
+    title += re.findall(r'<meta[^>]*name=["\']twitter:title["\'][^>]*content=["\']([^"\']*)["\']', html_content, re.IGNORECASE)
+    title += re.findall(r'<meta[^>]*content=["\']([^"\']*)["\'][^>]*name=["\']twitter:title["\']', html_content, re.IGNORECASE)
+
+    h1 = re.findall(r'<h1[^>]*>(.*?)</h1>', html_content, re.IGNORECASE | re.DOTALL)
+    h2 = re.findall(r'<h2[^>]*>(.*?)</h2>', html_content, re.IGNORECASE | re.DOTALL)
+    h3 = re.findall(r'<h3[^>]*>(.*?)</h3>', html_content, re.IGNORECASE | re.DOTALL)
+    h4 = re.findall(r'<h4[^>]*>(.*?)</h4>', html_content, re.IGNORECASE | re.DOTALL)
+    h5 = re.findall(r'<h5[^>]*>(.*?)</h5>', html_content, re.IGNORECASE | re.DOTALL)
+    h6 = re.findall(r'<h6[^>]*>(.*?)</h6>', html_content, re.IGNORECASE | re.DOTALL)
+    p  = re.findall(r'<p[^>]*>(.*?)</p>', html_content, re.IGNORECASE | re.DOTALL)
 
     desc = re.findall(
         r'<meta[^>]*name=["\']description["\'][^>]*content=["\']([^"\']*)["\']',
-        html, re.IGNORECASE)
+        html_content, re.IGNORECASE)
 
     if not desc:
         desc = re.findall(
             r'<meta[^>]*property=["\']og:description["\'][^>]*content=["\']([^"\']*)["\']',
-            html, re.IGNORECASE)
+            html_content, re.IGNORECASE)
 
     if not desc:
         desc = re.findall(
             r'<meta[^>]*name=["\']twitter:description["\'][^>]*content=["\']([^"\']*)["\']',
-            html, re.IGNORECASE)
+            html_content, re.IGNORECASE)
 
     def looks_like_garbage(t):
         if len(t) > 350:
@@ -56,16 +60,21 @@ def reformat_html_tags(html_content):
     clean_html = lambda html: re.sub(
         r'<(header|nav|footer|aside|script|style|iframe|noscript|form|button|svg)[^>]*>.*?</\1>|<!--.*?-->',
         '',
-        html,
+        html_content,
         flags=re.DOTALL | re.IGNORECASE
     )
 
-    html_out = clean_html(html_content)
+    html_out = ' Emails: ' + ' '.join(emails)
+    html_out += clean_html(html_content)
+
     html_out = re.sub(r'\s+', ' ', html_out).strip()
     html_out = re.sub(r'<(script|style).*?>.*?</\1>', '', html_out, flags=re.DOTALL | re.IGNORECASE)
     html_out = re.sub(r'<[^>]+>', ' ', html_out)
     html_out = re.sub(r'&[a-zA-Z0-9#]+;', ' ', html_out)
     html_out = re.sub(r'\s+', ' ', html_out).strip()
+
+
+
 
     return html_out, texts
 

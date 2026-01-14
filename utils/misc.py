@@ -1,6 +1,6 @@
 import re
 import requests
-
+import torch
 from core.model_manager import get_model
 from utils.regex import reformat_html_tags
 
@@ -17,20 +17,10 @@ stop_words = set(stopwords.words('english'))
 
 
 
-def clamp_search_term(term):
-    if len(term.split()) > 1:
-       #stick words side by side
-       terms = term.split()
-       alt_list = []
-       for term in terms:
-           term = term.strip()
-           alt_list.append(term + term[::-1])
 
-       return alt_list
-    else:
-        return []
 
 def extract_keywords(text):
+    global stop_words
     stemmer = PorterStemmer()
     words = re.findall(r'\b[a-zA-Z]+\b', text.lower())
     
@@ -75,24 +65,42 @@ def cosine_similarity(vector1, vector2):
 
 def vectorise_text(text):
     model = get_model()
-    vectors = []
+
     return model.encode(text)
+
+def encode_tokens(self, text):
+    model = get_model()
+    inputs = model.tokenizer(text, return_tensors="pt", truncation=True)
+    with torch.no_grad():
+        outputs = self.model[0].auto_model(**inputs)
+    return outputs.last_hidden_state.squeeze(0)
+
+def make_request(url):
+    headers = {
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
+    }
+
+    if not url.startswith("http"):
+        url = "https://" + url
+    url = url.rstrip("/")
+
+    try:
+        response = requests.get(url, headers=headers, timeout=10, allow_redirects=True)
+        return response
+
+    except requests.RequestException as e:
+        print(f"Request failed for {url}")
+        return
+
+    if response.status_code != 200:
+        print(f"Could not find url: {url}")
+        return
 
 def rank(url, score):
     url_obj = urllib.parse.urlparse(url)
     importance = score
 
-    paths = [p for p in url_obj.path.split('/') if p]
-    subdomains = url_obj.netloc.split('.')[:-2]
-    params = url_obj.query.split('&') if url_obj.query else []
 
-    path_depth = len(paths)
-    param_count = len(params)
-    subdomain_count = len(subdomains)
-
-    total_depth = path_depth + param_count + subdomain_count
-
-    path_length_penalty = 1 / (1 + total_depth * 0.15)
 
     domain = get_domain(url)
     tld = get_tld(domain)
@@ -105,5 +113,5 @@ def rank(url, score):
     else:
         tld_multiplier = 0.7
 
-    base_score = log1p(importance) * path_length_penalty * tld_multiplier
+    base_score = log1p(importance) * tld_multiplier
     return base_score
