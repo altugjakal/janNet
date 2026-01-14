@@ -13,5 +13,8 @@ The term vector is compared to other vectors in the database, resulting in a clo
 And then a copy of the input term is spliced into words to be seacrhed in the index. Repetitive words cause the cumulation
 of importance scores of the words in the word-index.
 
-
+##TODO:
+Apply MaxSim as the last ranking layer
+Switch to BM25
+OOP full implementation
 
