@@ -1,37 +1,41 @@
-import urllib.parse
+from utils.misc import make_request
 from utils.regex import get_domain, get_tld
-from utils.misc import extract_keywords, clamp_search_term
+from utils.misc import extract_keywords
 from utils.data_handling import *
 from utils.misc import rank
 
+class Search():
+    def __init__(self):
+        pass
+
+    def search(self, term):
+        terms = extract_keywords(term)
+
+        results = []
+
+        url_scores = {}
+        contents = {}
+
+        initials = search_index(terms)
+
+        for url, importance in initials.items():
+
+            try:
+                contents[url] = make_request(url).text
+            except:
+                print("Failed request for content on: Keyword Search, For: ", url)
+                continue
+
+            base_score = rank(url, importance)
+
+            if url in url_scores:
+
+                url_scores[url] += base_score
+            else:
+                url_scores[url] = base_score
 
 
-def search(term):
-    terms = extract_keywords(term)
-    terms += clamp_search_term(term)
-    terms = list(set(terms))
 
-    results = []
 
-    url_scores = {}
 
-    initials = search_index(terms)
-
-    for url, importance in initials.items():
-
-        base_score = rank(url, importance)
-
-        if url in url_scores:
-
-            url_scores[url] += base_score
-        else:
-            url_scores[url] = base_score
-
-    
-
-    
-
-    print(f"Search for '{term}' yielded {len(results)} results.")
-    print("\nDebug - Sorted URLs and Scores:")
-
-    return url_scores
+        return url_scores, contents

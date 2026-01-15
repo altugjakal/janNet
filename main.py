@@ -1,15 +1,18 @@
 from core.vectordb.vectordb import VectorDB
-from utils.regex import get_domain
-
+from guppy import hpy
 from utils.data_handling import *
 import time
 from flask import Flask
-from core.crawl import crawl
+from core.crawl import Crawl
 import threading
 import traceback
 from constants import first_urls
 from api.routes.search import search_bp
 from api.routes.markup import markup_bp
+
+h = hpy()
+print(h.heap())
+before = h.heap()
 
 app = Flask(__name__)
 app.register_blueprint(search_bp, url_prefix='/search')
@@ -24,6 +27,7 @@ initialize_database()
 crawler_running = True
 MAX_CRAWLS = 1000
 db = VectorDB()
+crawler = Crawl(sleep_median=3, sleep_padding=1, db=db)
 
 
 
@@ -39,7 +43,7 @@ def main():
 
 
     while crawler_running and crawl_count < MAX_CRAWLS:
-        queue = get_queue()
+        queue = get_queue_batch()
 
         if not queue:
             print("Queue empty!")
@@ -51,10 +55,9 @@ def main():
             drop_from_queue(url)
             continue
 
-        if url in get_all_urls():
-            continue
+
         try:
-            crawl(url, sleep_median=3, sleep_padding=1, db=db)
+            crawler.crawl(url)
 
         except Exception as e:
             traceback.print_exc()
@@ -62,7 +65,6 @@ def main():
 
         crawl_count += 1
 
-    
 
 
 
@@ -71,3 +73,6 @@ if __name__ == "__main__":
     crawler_thread.start()
     time.sleep(5)
     app.run(host=host, port=port, debug=False)
+
+after = h.heap()
+print(after - before)

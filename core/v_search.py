@@ -1,29 +1,34 @@
-
-from utils.misc import vectorise_text, rank
+from utils.misc import vectorise_text, rank, make_request
 from utils.data_handling import *
 from core.vectordb.vectordb import VectorDB
 
-def vector_search(term):
-    db = VectorDB()
-    term_vector = db.text_vectoriser(term)
-    vectors = db.cosine_similarity(term_vector)
+class VectorSearch():
+    def __init__(self, db):
+        self.db  = db
 
-    url_scores = {}
-    results = []
+    def search(self, term):
+        db = VectorDB()
+        term_vector = db.text_vectoriser(term)
+        vectors = db.cosine_similarity(term_vector)
 
-    for id, score in vectors:
+        url_scores = {}
+        url_contents = {}
+        results = []
+
+        for id, score in vectors:
+            url = get_url_by_vector_id(id)
+
+            try:
+                url_contents[url] = make_request(url).text
+            except:
+                print("Failed request for content on: Vector Search, For: ", url)
+                continue
 
 
-        url = get_url_by_vector_id(id)
-
-        score = rank(url, score)
-
-
-        url_scores[url] = score
+            score = rank(url, score)
+            url_scores[url] = score
 
 
-    
-
-    return url_scores
+        return url_scores, url_contents
 
 

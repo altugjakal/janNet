@@ -43,18 +43,40 @@ def extract_keywords(text):
     
     return filtered_words
 
+def make_request(url):
+    headers = {
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
+    }
 
-def site_details(url):
+    if not url.startswith("http"):
+        url = "https://" + url
+    url = url.rstrip("/")
+
     try:
-        response = requests.get(url, timeout=10, allow_redirects=True, headers={
-            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/58.0.3029.110 Safari/537.3'
-        })
+        response = requests.get(url, headers=headers, timeout=10, allow_redirects=True)
+        return response
+
     except requests.RequestException as e:
         print(f"Request failed for {url}")
-        return "No title available", "No description available", "No content available"
+        return
 
-    if response.status_code == 200:
-        reformatted_content, texts = reformat_html_tags(response.text)
+    if response.status_code != 200:
+        print(f"Could not find url: {url}")
+        return
+
+
+def site_details(url=None, content=None): #extract details from the given content, if given
+    if content is None and url is not None:
+        try:
+            response = make_request(url)
+            content = response.text
+
+        except requests.RequestException as e:
+            print(f"Request failed for {url}")
+            return "No title available", "No description available", "No content available"
+
+    if content:
+        reformatted_content, texts = reformat_html_tags(content)
         description = texts[8][0] if texts[8] else texts[7][0] if texts[7] else texts[6][0] if texts[6] else "No description available"
         title = texts[0][0] if texts[0] else "No title available"
 

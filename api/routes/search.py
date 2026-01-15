@@ -1,26 +1,27 @@
 
-from core.search import search
+from core.hybrid import HybridSearch
 from utils.regex import  get_domain
 from flask import jsonify, Blueprint
 from utils.misc import site_details
-from core.hybrid import hybrid
 
 
 search_bp = Blueprint('search_bp', __name__)
+HybridSearch = HybridSearch(return_limit=8)
+
 
 @search_bp.route("/<term>")
 def search_route(term):
     # keep here indexes are always updated
-    results = hybrid(term)
+    results, contents = HybridSearch.combined_search(term=term)
     site_data = []
-    contents = []
 
-    for result in results:
-        title, description, content = site_details(result)
-        contents.append(content)
+    for result, content in zip(results, contents):
+        title, description, site_content = site_details(result, content)
+
 
         site_data.append({
             'url': result,
+            'content': content,
             'title': title,
             'description': description,
             'domain': get_domain(result),
@@ -29,7 +30,8 @@ def search_route(term):
         })
 
     return jsonify({
-        'results': site_data
+        'results': site_data,
+        'contents': contents
     })
 
 
