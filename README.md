@@ -15,6 +15,6 @@ of importance scores of the words in the word-index.
 
 ## TODO:
 Apply MaxSim as the last ranking layer
-Switch to BM25
-OOP full implementation
+/ Switch to BM25 / 
+OOP full implementation / FAISS (Facebook, where is your documentation?)
 
