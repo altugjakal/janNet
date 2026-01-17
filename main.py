@@ -1,3 +1,4 @@
+from core.db_manager import get_db
 from core.vectordb.vectordb import VectorDB
 from guppy import hpy
 from utils.data_handling import *
@@ -10,9 +11,8 @@ from constants import first_urls
 from api.routes.search import search_bp
 from api.routes.markup import markup_bp
 
-h = hpy()
-print(h.heap())
-before = h.heap()
+
+
 
 app = Flask(__name__)
 app.register_blueprint(search_bp, url_prefix='/search')
@@ -21,12 +21,11 @@ app.register_blueprint(markup_bp, url_prefix='/')
 host = 'localhost'
 port = 5004
 
-initialize_vector_database()
 initialize_database()
 
 crawler_running = True
 MAX_CRAWLS = 1000
-db = VectorDB()
+db = get_db()
 crawler = Crawl(sleep_median=3, sleep_padding=1, db=db)
 
 
@@ -74,5 +73,4 @@ if __name__ == "__main__":
     time.sleep(5)
     app.run(host=host, port=port, debug=False)
 
-after = h.heap()
-print(after - before)
+

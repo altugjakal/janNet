@@ -60,9 +60,7 @@ def make_request(url):
         print(f"Request failed for {url}")
         return
 
-    if response.status_code != 200:
-        print(f"Could not find url: {url}")
-        return
+
 
 
 def site_details(url=None, content=None): #extract details from the given content, if given
@@ -95,10 +93,6 @@ def cosine_similarity(vector1, vector2):
 
     return similarity
 
-def vectorise_text(text):
-    model = get_model()
-    vectors = []
-    return model.encode(text)
 
 def rank(url, score):
     url_obj = urllib.parse.urlparse(url)

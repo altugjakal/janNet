@@ -72,7 +72,7 @@ class Crawl():
         content, texts = reformat_html_tags(content)
 
         try:
-            vector = db.text_vectoriser(content)
+            vector = db.vectorise_text(content)
             id = hash(url) % (10 ** 9)
             db.insert(vector=vector, id=id)
             manage_vector_for_index(url=url, emb_id=id)

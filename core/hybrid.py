@@ -5,11 +5,11 @@ from core.vectordb.vectordb import VectorDB
 
 class HybridSearch():
 
-    def __init__(self, vector_weight=0.4, kw_weight=0.6, return_limit=5):
+    def __init__(self, vector_weight=0.4, kw_weight=0.6, return_limit=5, db=None):
         self.vector_weight = vector_weight
         self.kw_weight = kw_weight
         self.return_limit = return_limit
-        self.db = VectorDB()
+        self.db = db
         self.v_search_instance = VectorSearch(self.db)
         self.kw_search_instance = Search()
 
@@ -19,6 +19,7 @@ class HybridSearch():
         return_limit = self.return_limit
         v_search_instance = self.v_search_instance
         kw_search_instance = self.kw_search_instance
+
 
         keyword_scores, keyword_content = kw_search_instance.search(term)
         vector_scores, vector_content = v_search_instance.search(term)
@@ -62,5 +63,4 @@ class HybridSearch():
             print(f"{i}. {url}")
             print(f"   Combined: {score:.3f} (KW: {kw:.3f}, Vec: {vec:.3f})")
 
-        return [url for url, score in sorted_urls[:return_limit]], [content for content in
-                                                                    sorted_contents.values()[:return_limit]]
+        return [url for url, score in sorted_urls[:return_limit]], [content for content in list(sorted_contents.values())[:return_limit]]

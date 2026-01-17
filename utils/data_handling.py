@@ -1,6 +1,5 @@
 import sqlite3
 from contextlib import contextmanager
-from datetime import datetime
 import numpy as np
 from utils.misc import cosine_similarity
 
@@ -66,7 +65,7 @@ def initialize_database(db_path='db/jannet1.db'):
 def add_url(url, db_path='db/jannet1.db'):
     with open_db(db_path) as conn:
         c = conn.cursor()
-        c.execute('''INSERT OR IGNORE INTO urls (url, crawled_at) VALUES (?, ?)''', (url, datetime.now()))
+        c.execute('''INSERT OR IGNORE INTO urls (url) VALUES (?)''', (url,))
         conn.commit()
 
 
@@ -77,26 +76,33 @@ def is_url_visited(url, db_path='db/jannet1.db'):
         return c.fetchone() is not None
 
 
-def get_all_urls(db_path='db/jannet1.db'):
-    with open_db(db_path) as conn:
-        c = conn.cursor()
-        c.execute('''SELECT url FROM urls''')
-        return c.fetchall()
 
 
 def add_to_queue(url, db_path='db/jannet1.db'):
     with open_db(db_path) as conn:
         c = conn.cursor()
-        c.execute('''INSERT OR IGNORE INTO queue (url, added_at) VALUES (?, ?)''', (url, datetime.now()))
+        c.execute('''INSERT OR IGNORE INTO queue (url) VALUES (?)''', (url,))
         conn.commit()
 def add_to_queue_batch(urls, db_path='db/jannet1.db'):
     with open_db(db_path) as conn:
         c = conn.cursor()
         c.executemany(
-            '''INSERT OR IGNORE INTO queue (url, added_at) VALUES (?, ?)''',
-            [(url, datetime.now()) for url in urls]
+            '''INSERT OR IGNORE INTO queue (url) VALUES (?)''',
+            [(url,) for url in urls]
         )
         conn.commit()
+
+def get_total_kw_count(keyword, db_path='db/jannet1.db'):
+    with open_db(db_path) as conn:
+        c = conn.cursor()
+        c.execute('''SELECT COUNT(*) FROM keyword_index WHERE keyword = ?''', (keyword,))
+        return c.fetchone()[0]
+
+def get_total_url_count(db_path='db/jannet1.db'):
+    with open_db(db_path) as conn:
+        c = conn.cursor()
+        c.execute('''SELECT COUNT(*) FROM urls''')
+        return c.fetchone()[0]
 
 def get_queue_size(db_path='db/jannet1.db'):
     """Get current queue size"""
@@ -119,17 +125,19 @@ def is_in_queue(url, db_path='db/jannet1.db'):
         return len(c.fetchall()) > 0
 
 
-def get_queue(db_path='db/jannet1.db'):
+def get_queue_batch(db_path='db/jannet1.db', limit=1000):
     with open_db(db_path) as conn:
         c = conn.cursor()
-        c.execute('''SELECT url FROM queue ORDER BY added_at ASC''')
+        c.execute('''SELECT url FROM queue ORDER BY added_at ASC LIMIT ?''',
+                  (limit,))
+
         return c.fetchall()
 
 
 def add_domain(domain, db_path='db/jannet1.db'):
     with open_db(db_path) as conn:
         c = conn.cursor()
-        c.execute('''INSERT OR IGNORE INTO domains (domain, added_at) VALUES (?, ?)''', (domain, datetime.now()))
+        c.execute('''INSERT OR IGNORE INTO domains (domain) VALUES (?, ?)''', (domain))
         conn.commit()
 
 
@@ -221,55 +229,3 @@ def search_index(keywords, db_path='db/jannet1.db'):
 
         return url_scores
 
-#below this line is the vector db
-
-def initialize_vector_database(db_path='db/live1.db'):
-
-    with open_db(db_path) as conn:
-        c = conn.cursor()
-
-        c.execute('''CREATE TABLE IF NOT EXISTS vectors
-                     (id INT PRIMARY KEY,
-                      dtype TEXT NOT NULL,
-                      vector BLOB NOT NULL)''')
-
-
-        conn.commit()
-
-def add_vector(vector, id):
-    with open_db(db_path='db/live1.db') as conn:
-        vector = np.array(vector)
-        new_vector = vector.tobytes()
-        c = conn.cursor()
-
-        c.execute('''INSERT INTO vectors (id, vector, dtype) VALUES (?, ?, ?)''', (id, new_vector, str(vector.dtype)))
-
-        conn.commit()
-
-def delete_vector(id):
-    with open_db(db_path='db/live1.db') as conn:
-        c = conn.cursor()
-        c.execute('''DELETE FROM vectors WHERE id = ?''', (id,))
-        conn.commit()
-
-def get_vector(id):
-    with open_db(db_path='db/live1.db') as conn:
-        c = conn.cursor()
-        c.execute('''SELECT vector FROM vectors WHERE id = ?''', (id,))
-        vector = c.fetchone()
-        return vector
-
-def cosine_similarity_vectors(input_vector, top_k=50):
-    with open_db(db_path='db/live1.db') as conn:
-        res_map = {}
-        c = conn.cursor()
-        c.execute('''SELECT vector, id, dtype FROM vectors''')
-        results = c.fetchall()
-        for vector, id, dtype in results:
-            if not isinstance(vector, bytes):
-                raise TypeError(f"Expected bytes, got {type(vector)} for id {id}")
-            vector = np.frombuffer(vector, dtype=dtype).reshape(384, 1).flatten()
-            cosine = cosine_similarity(vector, input_vector).flatten()
-            res_map[id] = float(cosine[0])
-        sorted_dict = sorted(res_map.items(), key=lambda x: x[1], reverse=True)
-        return sorted_dict[:top_k]
