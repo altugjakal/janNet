@@ -1,20 +1,35 @@
-# janNet: Specialized Search Engine
+## Roadmap
 
-janNet is a lightweight(not anymore), experimental search engine project designed for specialised use and testing. It indexes and searches a curated set of URLs and domains from a list.
+- [x] Hybrid TFIDF + vector search
+- [x] FAISS integration
+- [x] Depth-aware ranking
+- [ ] MaxSim re-ranking (late-interaction scoring)
+- [ ] Domain authority signals
+- [x] Web UI
+- [x] API endpoints
 
-## Flow
-The bot crawls through the web.
-Each word is assigned an importance with respect to their location in the document
-and their TF-IDF score.
-Document is then turned into a vector of 384 dimensions and stored in a database.
+## Performance
 
-On search, the term is turned into a vector of same size.
-The term vector is compared to other vectors in the database, resulting in a closeness-score (cosine similarity).
-And then a copy of the input term is spliced into words to be seacrhed in the index. Repetitive words cause the cumulation
-of importance scores of the words in the word-index.
+*Benchmarks coming soon*
 
-## TODO:
-Apply MaxSim as the last ranking layer
-/ Switch to BM25 / 
-OOP full implementation / FAISS (Facebook, where is your documentation?)
+## Use Cases
 
+- **Vertical Search**: Build specialized search for specific domains
+- **Research**: Experiment with hybrid retrieval techniques
+- **Learning**: Understand how modern search engines work under the hood
+
+## Contributing
+
+Issues and PRs welcome. See [CONTRIBUTING.md](CONTRIBUTING.md) for guidelines.
+
+## License
+
+MIT — use it however you want.
+
+## Acknowledgments
+
+Built with [FAISS](https://github.com/facebookresearch/faiss), [NLTK](https://www.nltk.org/), and pure curiousity.
+
+---
+
+**Star the repo if you find it useful!** ⭐
