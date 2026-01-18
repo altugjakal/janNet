@@ -1,3 +1,13 @@
+
+# janNet
+
+A hybrid search engine combining traditional keyword matching with neural vector search for high-quality document retrieval.
+
+![Python](https://img.shields.io/badge/Python-3.8+-blue.svg)
+![License](https://img.shields.io/badge/License-MIT-green.svg)
+![Status](https://img.shields.io/badge/Status-Active%20Development-orange.svg)
+
+
 ## Roadmap
 
 - [x] Hybrid TFIDF + vector search
