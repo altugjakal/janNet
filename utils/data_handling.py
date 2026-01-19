@@ -7,7 +7,7 @@ from utils.misc import cosine_similarity
 
 
 @contextmanager
-def open_db(db_path='db/jannet1.db'):
+def open_db(db_path='db/general.db'):
 
     conn = sqlite3.connect(db_path)
     try:
@@ -17,7 +17,7 @@ def open_db(db_path='db/jannet1.db'):
         conn.close()
 
 
-def initialize_database(db_path='db/jannet1.db'):
+def initialize_database(db_path='db/general.db'):
 
     with open_db(db_path) as conn:
         c = conn.cursor()
@@ -62,14 +62,14 @@ def initialize_database(db_path='db/jannet1.db'):
         conn.commit()
 
 
-def add_url(url, db_path='db/jannet1.db'):
+def add_url(url, db_path='db/general.db'):
     with open_db(db_path) as conn:
         c = conn.cursor()
         c.execute('''INSERT OR IGNORE INTO urls (url) VALUES (?)''', (url,))
         conn.commit()
 
 
-def is_url_visited(url, db_path='db/jannet1.db'):
+def is_url_visited(url, db_path='db/general.db'):
     with open_db(db_path) as conn:
         c = conn.cursor()
         c.execute('''SELECT url FROM urls WHERE url = ?''', (url,))
@@ -78,12 +78,12 @@ def is_url_visited(url, db_path='db/jannet1.db'):
 
 
 
-def add_to_queue(url, db_path='db/jannet1.db'):
+def add_to_queue(url, db_path='db/general.db'):
     with open_db(db_path) as conn:
         c = conn.cursor()
         c.execute('''INSERT OR IGNORE INTO queue (url) VALUES (?)''', (url,))
         conn.commit()
-def add_to_queue_batch(urls, db_path='db/jannet1.db'):
+def add_to_queue_batch(urls, db_path='db/general.db'):
     with open_db(db_path) as conn:
         c = conn.cursor()
         c.executemany(
@@ -92,40 +92,40 @@ def add_to_queue_batch(urls, db_path='db/jannet1.db'):
         )
         conn.commit()
 
-def get_total_kw_count(keyword, db_path='db/jannet1.db'):
+def get_total_kw_count(keyword, db_path='db/general.db'):
     with open_db(db_path) as conn:
         c = conn.cursor()
         c.execute('''SELECT COUNT(*) FROM keyword_index WHERE keyword = ?''', (keyword,))
         return c.fetchone()[0]
 
-def get_total_url_count(db_path='db/jannet1.db'):
+def get_total_url_count(db_path='db/general.db'):
     with open_db(db_path) as conn:
         c = conn.cursor()
         c.execute('''SELECT COUNT(*) FROM urls''')
         return c.fetchone()[0]
 
-def get_queue_size(db_path='db/jannet1.db'):
+def get_queue_size(db_path='db/general.db'):
     """Get current queue size"""
     with open_db(db_path) as conn:
         c = conn.cursor()
         c.execute('''SELECT COUNT(*) FROM queue''')
         return c.fetchone()[0]
 
-def drop_from_queue(url, db_path='db/jannet1.db'):
+def drop_from_queue(url, db_path='db/general.db'):
     with open_db(db_path) as conn:
         c = conn.cursor()
         c.execute('''DELETE FROM queue WHERE url = ?''', (url,))
         conn.commit()
 
 
-def is_in_queue(url, db_path='db/jannet1.db'):
+def is_in_queue(url, db_path='db/general.db'):
     with open_db(db_path) as conn:
         c = conn.cursor()
         c.execute('''SELECT url FROM queue WHERE url = ?''', (url,))
         return len(c.fetchall()) > 0
 
 
-def get_queue_batch(db_path='db/jannet1.db', limit=1000):
+def get_queue_batch(db_path='db/general.db', limit=1000):
     with open_db(db_path) as conn:
         c = conn.cursor()
         c.execute('''SELECT url FROM queue ORDER BY added_at ASC LIMIT ?''',
@@ -134,34 +134,34 @@ def get_queue_batch(db_path='db/jannet1.db', limit=1000):
         return c.fetchall()
 
 
-def add_domain(domain, db_path='db/jannet1.db'):
+def add_domain(domain, db_path='db/general.db'):
     with open_db(db_path) as conn:
         c = conn.cursor()
         c.execute('''INSERT OR IGNORE INTO domains (domain) VALUES (?, ?)''', (domain))
         conn.commit()
 
 
-def check_domain(domain, db_path='db/jannet1.db'):
+def check_domain(domain, db_path='db/general.db'):
     with open_db(db_path) as conn:
         c = conn.cursor()
         c.execute('''SELECT domain FROM domains WHERE domain = ?''', (domain,))
         return c.fetchone() is not None
 
 
-def get_domains(db_path='db/jannet1.db'):
+def get_domains(db_path='db/general.db'):
     with open_db(db_path) as conn:
         c = conn.cursor()
         c.execute('''SELECT domain FROM domains''')
         return c.fetchall()
 
-def manage_vector_for_index(url, emb_id, db_path='db/jannet1.db'):
+def manage_vector_for_index(url, emb_id, db_path='db/general.db'):
     with open_db(db_path) as conn:
         c = conn.cursor()
         c.execute('''INSERT INTO vector_index (embedding_id,
                 url) VALUES (?, ?)''', (emb_id, url))
         conn.commit()
 
-def get_url_by_vector_id(vector_id, db_path='db/jannet1.db'):
+def get_url_by_vector_id(vector_id, db_path='db/general.db'):
     with open_db(db_path) as conn:
         c = conn.cursor()
         c.execute('''SELECT url FROM vector_index WHERE embedding_id = ?''', (vector_id,))
@@ -176,7 +176,7 @@ def get_url_by_vector_id(vector_id, db_path='db/jannet1.db'):
 
 
 
-def manage_for_index(url, pairs, db_path='db/jannet1.db'):
+def manage_for_index(url, pairs, db_path='db/general.db'):
     with open_db(db_path) as conn:
         c = conn.cursor()
 
@@ -215,7 +215,7 @@ def manage_for_index(url, pairs, db_path='db/jannet1.db'):
 
 
 
-def search_index(keywords, db_path='db/jannet1.db'):
+def search_index(keywords, db_path='db/general.db'):
     with open_db(db_path) as conn:
         c = conn.cursor()
         url_scores = {}
