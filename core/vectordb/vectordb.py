@@ -27,7 +27,7 @@ class VectorDB:
     def find(self, id):
         self.index.reconstruct(id)
 
-    def cosine_similarity(self, query_vector, k=10):
+    def euclidian_d(self, query_vector, k=10):
         faiss.omp_set_num_threads(1)
         query = np.array([query_vector]).astype('float32')
         distances, ids = self.index.search(query, k)

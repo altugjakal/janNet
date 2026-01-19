@@ -9,7 +9,7 @@ class VectorSearch():
     def search(self, term):
 
         term_vector = self.db.vectorise_text(term)
-        vectors = self.db.cosine_similarity(term_vector)
+        vectors = self.db.euclidian_d(term_vector)
 
 
         url_scores = {}
