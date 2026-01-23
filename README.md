@@ -14,6 +14,7 @@ A hybrid search engine combining traditional keyword matching with neural vector
 - [x] FAISS integration
 - [x] Depth-aware ranking
 - [ ] MaxSim re-ranking (late-interaction scoring)
+- [ ] Handle multiple passages (getting hte most relevant passage)
 - [ ] Domain authority signals
 - [x] Web UI
 - [x] API endpoints
