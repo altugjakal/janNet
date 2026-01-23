@@ -1,51 +1,53 @@
 import random
 from math import log1p
 import time
-from constants import html_importance_map
-from utils.regex import extract_anchors, get_domain, reformat_html_tags
+from utils.config import Config
+from managers.db_manager import get_db, get_vdb
+from utils.regex import extract_anchors, reformat_html_tags
 from utils.misc import extract_keywords, make_request
 import tldextract
-from utils.data_handling import *
+
 from urllib.parse import urljoin, urlparse
 
+
 class Crawl():
-    def __init__(self, sleep_median, sleep_padding, db):
+    def __init__(self, sleep_median, sleep_padding, db=get_db(), vdb=get_vdb()):
 
         self.sleep_median = sleep_median
         self.sleep_padding = sleep_padding
         self.db = db
+        self.vdb = vdb
 
     def assign_importance(self, content, keyword, element_type):
         tf = content.lower().count(keyword.lower())
         tf = 1 + log1p(tf)
         tf_capped = min(tf, 3)
-        idf = get_total_url_count()/ max(1, get_total_kw_count(keyword.lower()))
+        idf = self.db.get_total_url_count() / max(1, self.db.get_total_kw_count(keyword.lower()))
         tfidf = tf_capped * idf
         phrase_bonus = len(keyword.split()) * 0.5
-        base_importance = html_importance_map.get(element_type, 1) * tfidf * (1 + phrase_bonus)
+        base_importance = Config.HTML_IMPORTANCE_MAP.get(element_type, 1) * tfidf * (1 + phrase_bonus)
         return base_importance
-
 
     def crawl(self, url):
         # Check if already visited
 
-        db = self.db
         sleep_median = self.sleep_median
         sleep_padding = self.sleep_padding
 
-        if is_url_visited(url):
-            drop_from_queue(url)
+        if self.db.is_url_visited(url):
+            self.db.drop_from_queue(url)
             return
 
         # Mark as crawled
-        add_url(url)
-        drop_from_queue(url)
-
+        self.db.add_url(url)
+        self.db.drop_from_queue(url)
 
         try:
             content = make_request(url).text
         except Exception as e:
             return
+
+
 
         anchors = extract_anchors(content)
 
@@ -60,9 +62,8 @@ class Crawl():
             absolute_url = absolute_url.rstrip("/")
             absolute_url = absolute_url.rstrip("#")
 
-
-            if not is_url_visited(absolute_url) and not is_in_queue(absolute_url):
-                add_to_queue(absolute_url)
+            if not self.db.is_url_visited(absolute_url) and not self.db.is_in_queue(absolute_url):
+                self.db.add_to_queue(absolute_url)
                 new_count += 1
 
         if new_count > 0:
@@ -72,10 +73,9 @@ class Crawl():
         content, texts = reformat_html_tags(content)
 
         try:
-            vector = db.vectorise_text(content)
             id = hash(url) % (10 ** 9)
-            db.insert(vector=vector, id=id)
-            manage_vector_for_index(url=url, emb_id=id)
+            self.vdb.insert(text=content, id=id)
+            self.db.manage_vector_for_index(url=url, emb_id=id)
         except Exception as e:
             print(f"Vector error: {e}")
 
@@ -110,7 +110,7 @@ class Crawl():
                     keyword_scores[word] = keyword_scores.get(word, 0) + importance
 
             if keyword_scores:
-                manage_for_index(url=url, pairs=keyword_scores)
+                self.db.manage_for_index(url=url, pairs=keyword_scores)
 
         print(f"200: {url}")
         time.sleep(sleep_median + random.uniform(-sleep_padding, sleep_padding))

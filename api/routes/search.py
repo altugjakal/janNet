@@ -1,4 +1,4 @@
-from core.db_manager import get_db
+from managers.db_manager import get_vdb, get_db
 from core.hybrid import HybridSearch
 from utils.regex import  get_domain
 from flask import jsonify, Blueprint
@@ -6,7 +6,7 @@ from utils.misc import site_details
 
 
 search_bp = Blueprint('search_bp', __name__)
-HybridSearch = HybridSearch(return_limit=8, db=get_db())
+HybridSearch = HybridSearch(return_limit=8, vdb=get_vdb(), db=get_db())
 
 
 @search_bp.route("/<term>")

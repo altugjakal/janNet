@@ -1,6 +1,6 @@
 from urllib.parse import urlparse
 import re
-import requests
+
 
 
 
@@ -92,6 +92,4 @@ def sanitize_route(url):
         return url[:-1]
     return url
 
-
-    
 

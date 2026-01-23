@@ -1,12 +1,10 @@
 from utils.misc import make_request
-from utils.regex import get_domain, get_tld
 from utils.misc import extract_keywords
-from utils.data_handling import *
-from utils.misc import rank
+from core.subscore import SubScore
 
-class Search():
-    def __init__(self):
-        pass
+class Search:
+    def __init__(self, db):
+        self.db = db
 
     def search(self, term):
         terms = extract_keywords(term)
@@ -16,7 +14,7 @@ class Search():
         url_scores = {}
         contents = {}
 
-        initials = search_index(terms)
+        initials = self.db.search_index(terms)
 
         for url, importance in initials.items():
 
@@ -26,7 +24,8 @@ class Search():
                 print("Failed request for content on: Keyword Search, For: ", url)
                 continue
 
-            base_score = rank(url, importance)
+            base_score = SubScore.get_url_rank(url, importance)
+
 
             if url in url_scores:
 

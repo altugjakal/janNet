@@ -1,13 +1,8 @@
-from core.db_manager import get_db
-from core.vectordb.vectordb import VectorDB
-from guppy import hpy
-from utils.data_handling import *
-import time
+from managers.db_manager import get_db, get_vdb
+from utils.config import Config
 from flask import Flask
 from core.crawl import Crawl
 import threading
-import traceback
-from constants import first_urls
 from api.routes.search import search_bp
 from api.routes.markup import markup_bp
 
@@ -21,28 +16,28 @@ app.register_blueprint(markup_bp, url_prefix='/')
 host = 'localhost'
 port = 5004
 
-initialize_database()
 
 crawler_running = True
 MAX_CRAWLS = 1000
 db = get_db()
-crawler = Crawl(sleep_median=3, sleep_padding=1, db=db)
+vdb = get_vdb()
+crawler = Crawl(sleep_median=3, sleep_padding=1, db=db, vdb=vdb)
 
 
 
 
 def main():
-    global crawler_running, MAX_CRAWLS, db
+    global crawler_running, MAX_CRAWLS, db, vdb
 
-    if get_queue_size() == 0:
-        add_to_queue_batch(first_urls)
+    if db.get_queue_size() == 0:
+        db.add_to_queue_batch(Config.SEED_URLS)
 
     crawl_count = 0
 
 
 
     while crawler_running and crawl_count < MAX_CRAWLS:
-        queue = get_queue_batch()
+        queue = db.get_queue_batch()
 
         if not queue:
             print("Queue empty!")
@@ -50,17 +45,15 @@ def main():
 
         url = queue[0][0]
 
-        if is_url_visited(url):
-            drop_from_queue(url)
+        if db.is_url_visited(url):
+            db.drop_from_queue(url)
             continue
 
 
-        try:
-            crawler.crawl(url)
 
-        except Exception as e:
-            traceback.print_exc()
-            continue
+        crawler.crawl(url)
+
+
 
         crawl_count += 1
 
@@ -70,7 +63,6 @@ def main():
 if __name__ == "__main__":
     crawler_thread = threading.Thread(target=main)
     crawler_thread.start()
-    time.sleep(5)
     app.run(host=host, port=port, debug=False)
 
 

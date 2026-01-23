@@ -1,17 +1,18 @@
 from core.search import Search
-from core.v_search import VectorSearch
-from core.vectordb.vectordb import VectorDB
+from core.vector_search import VectorSearch
+from utils.config import Config
 
 
 class HybridSearch():
 
-    def __init__(self, vector_weight=0.4, kw_weight=0.6, return_limit=5, db=None):
+    def __init__(self, vector_weight=Config.VECTOR_WEIGHT, kw_weight=Config.LEXICAL_WEIGHT, return_limit=5, vdb=None, db=None):
         self.vector_weight = vector_weight
         self.kw_weight = kw_weight
         self.return_limit = return_limit
+        self.vdb = vdb
         self.db = db
-        self.v_search_instance = VectorSearch(self.db)
-        self.kw_search_instance = Search()
+        self.v_search_instance = VectorSearch(vdb=self.vdb, db=self.db)
+        self.kw_search_instance = Search(self.db)
 
     def combined_search(self, term):
         vector_weight = self.vector_weight
