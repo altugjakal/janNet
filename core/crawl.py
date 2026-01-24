@@ -72,12 +72,12 @@ class Crawl():
         # Index content
         content, texts = reformat_html_tags(content)
 
-        try:
-            id = hash(url) % (10 ** 9)
-            self.vdb.insert(text=content, id=id)
-            self.db.manage_vector_for_index(url=url, emb_id=id)
-        except Exception as e:
-            print(f"Vector error: {e}")
+        words = content.split()
+        for i in range(0, len(words), 400):
+            chunk = ' '.join(words[i:i + 400])
+            chunk_id = hash((url, i)) % (10 ** 9)
+            self.vdb.insert(text=chunk, id=chunk_id)
+            self.db.manage_vector_for_index(url=url, emb_id=chunk_id)
 
         # Extract keywords
         url_obj = urlparse(url)

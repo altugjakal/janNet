@@ -1,3 +1,5 @@
+import torch
+
 from managers.model_manager import get_model
 import numpy as np
 import faiss
@@ -48,7 +50,20 @@ class VectorDB:
         model = get_model()
         return model.encode(text)
 
-    def last_hidden_state(self, text):
+    def tokenize_text(self, text):
         model = get_model()
-        return model.tokenize(text)
+        encoded = model.tokenizer(
+            text,
+            padding=True,
+            truncation=True,
+            return_tensors='pt'
+        )
+
+        with torch.no_grad():
+            output = model[0].auto_model(**encoded)
+
+        token_embeddings = output.last_hidden_state
+        attention_mask = encoded['attention_mask']
+
+        return token_embeddings, attention_mask
 

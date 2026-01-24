@@ -18,7 +18,7 @@ port = 5004
 
 
 crawler_running = True
-MAX_CRAWLS = 1000
+
 db = get_db()
 vdb = get_vdb()
 crawler = Crawl(sleep_median=3, sleep_padding=1, db=db, vdb=vdb)
@@ -27,7 +27,7 @@ crawler = Crawl(sleep_median=3, sleep_padding=1, db=db, vdb=vdb)
 
 
 def main():
-    global crawler_running, MAX_CRAWLS, db, vdb
+    global crawler_running, db, vdb
 
     if db.get_queue_size() == 0:
         db.add_to_queue_batch(Config.SEED_URLS)
@@ -36,7 +36,7 @@ def main():
 
 
 
-    while crawler_running and crawl_count < MAX_CRAWLS:
+    while crawler_running and crawl_count < Config.MAX_CRAWLS:
         queue = db.get_queue_batch()
 
         if not queue:

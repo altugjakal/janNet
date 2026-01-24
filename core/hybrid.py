@@ -1,7 +1,7 @@
 from core.search import Search
 from core.vector_search import VectorSearch
 from utils.config import Config
-
+from core.maxsim import MaxSim
 
 class HybridSearch():
 
@@ -13,6 +13,7 @@ class HybridSearch():
         self.db = db
         self.v_search_instance = VectorSearch(vdb=self.vdb, db=self.db)
         self.kw_search_instance = Search(self.db)
+        self.maxsim_instance = MaxSim(final_count=return_limit)
 
     def combined_search(self, term):
         vector_weight = self.vector_weight
@@ -54,6 +55,10 @@ class HybridSearch():
         sorted_urls = sorted(combined_scores.items(), key=lambda x: x[1], reverse=True)
         for url, score in sorted_urls:
             sorted_contents[url] = all_contents[url]
+
+
+
+
 
         print(f"\nHybrid search for '{term}' (KW: {kw_weight}, Vec: {vector_weight})")
         print(f"Found: {len(keyword_scores)} keyword, {len(vector_scores)} vector, {len(all_urls)} total")

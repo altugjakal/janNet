@@ -30,11 +30,11 @@ class IndexDB:
                           PRIMARY KEY (keyword, url))''')
 
             c.execute('''CREATE TABLE IF NOT EXISTS vector_index (
+                id,
                 embedding_id INTEGER NOT NULL,
                 url TEXT,
                 created_at TEXT NOT NULL default CURRENT_TIMESTAMP,
-                PRIMARY KEY (embedding_id, url))'''
-                      )
+                PRIMARY KEY (id))''')
 
             # Create indexes for fast lookups
             c.execute('CREATE INDEX IF NOT EXISTS idx_keyword ON keyword_index(keyword)')
