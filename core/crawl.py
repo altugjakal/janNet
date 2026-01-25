@@ -18,15 +18,7 @@ class Crawl():
         self.db = db
         self.vdb = vdb
 
-    def assign_importance(self, content, keyword, element_type):
-        tf = content.lower().count(keyword.lower())
-        tf = 1 + log1p(tf)
-        tf_capped = min(tf, 3)
-        idf = self.db.get_total_url_count() / max(1, self.db.get_total_kw_count(keyword.lower()))
-        tfidf = tf_capped * idf
-        phrase_bonus = len(keyword.split()) * 0.5
-        base_importance = Config.HTML_IMPORTANCE_MAP.get(element_type, 1) * tfidf * (1 + phrase_bonus)
-        return base_importance
+
 
     def crawl(self, url):
         # Check if already visited
@@ -60,7 +52,7 @@ class Crawl():
                 continue
 
             absolute_url = absolute_url.rstrip("/")
-            absolute_url = absolute_url.rstrip("#")
+            absolute_url = absolute_url.split("#")[0]
 
             if not self.db.is_url_visited(absolute_url) and not self.db.is_in_queue(absolute_url):
                 self.db.add_to_queue(absolute_url)
@@ -72,6 +64,7 @@ class Crawl():
         # Index content
         content, texts = reformat_html_tags(content)
 
+        #add overlap logic
         words = content.split()
         for i in range(0, len(words), 400):
             chunk = ' '.join(words[i:i + 400])
@@ -79,38 +72,8 @@ class Crawl():
             self.vdb.insert(text=chunk, id=chunk_id)
             self.db.manage_vector_for_index(url=url, emb_id=chunk_id)
 
-        # Extract keywords
-        url_obj = urlparse(url)
-        domain = tldextract.extract(url).domain
-        paths = [p for p in url_obj.path.split('/') if p]
-        subdomains = url_obj.netloc.split('.')[:-2]
-        params = [p for p in url_obj.query.split('&') if p] if url_obj.query else []
 
-        text_list = [
-            (texts[0] if len(texts) > 0 else [], "title"),
-            (texts[1] if len(texts) > 1 else [], "h1"),
-            (texts[2] if len(texts) > 2 else [], "h2"),
-            (texts[3] if len(texts) > 3 else [], "h3"),
-            (texts[4] if len(texts) > 4 else [], "h4"),
-            (texts[5] if len(texts) > 5 else [], "h5"),
-            (texts[6] if len(texts) > 6 else [], "h6"),
-            (texts[7] if len(texts) > 7 else [], "p"),
-            (texts[8] if len(texts) > 8 else [], "description"),
-            ([domain] if domain else [], "domain"),
-            (subdomains if subdomains else [], "subdomain"),
-            (paths if paths else [], "path"),
-            (params if params else [], "param")
-        ]
-
-        for text_items, element_type in text_list:
-            keyword_scores = {}
-            for text in text_items:
-                for word in extract_keywords(text):
-                    importance = self.assign_importance(text, word, element_type)
-                    keyword_scores[word] = keyword_scores.get(word, 0) + importance
-
-            if keyword_scores:
-                self.db.manage_for_index(url=url, pairs=keyword_scores)
+        self.db.manage_for_index(url=url, keywords=extract_keywords(content))
 
         print(f"200: {url}")
         time.sleep(sleep_median + random.uniform(-sleep_padding, sleep_padding))

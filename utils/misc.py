@@ -33,7 +33,7 @@ def extract_keywords(text):
         for word in words
         if word not in stop_words
 
-    ]
+    ] + words
 
     return filtered_words
 

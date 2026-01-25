@@ -48,6 +48,9 @@ class HybridSearch():
             kw = keyword_scores.get(url, 0)
             vec = vector_scores.get(url, 0)
 
+            if kw + vec < Config.SCORE_FILTER:
+                continue
+
             combined_score = kw_weight * kw + vector_weight * vec
 
             combined_scores[url] = combined_score

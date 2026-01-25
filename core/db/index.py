@@ -2,7 +2,6 @@ import sqlite3
 from contextlib import contextmanager
 
 
-
 class IndexDB:
     def __init__(self):
         with self.open_db() as conn:
@@ -26,7 +25,6 @@ class IndexDB:
             c.execute('''CREATE TABLE IF NOT EXISTS keyword_index
                          (keyword TEXT,
                           url TEXT,
-                          importance REAL,
                           PRIMARY KEY (keyword, url))''')
 
             c.execute('''CREATE TABLE IF NOT EXISTS vector_index (
@@ -52,15 +50,11 @@ class IndexDB:
         finally:
             conn.close()
 
-
-
-
     def add_url(self, url):
         with self.open_db() as conn:
             c = conn.cursor()
             c.execute('''INSERT OR IGNORE INTO urls (url) VALUES (?)''', (url,))
             conn.commit()
-
 
     def is_url_visited(self, url):
         with self.open_db() as conn:
@@ -68,14 +62,12 @@ class IndexDB:
             c.execute('''SELECT url FROM urls WHERE url = ?''', (url,))
             return c.fetchone() is not None
 
-
-
-
     def add_to_queue(self, url):
         with self.open_db() as conn:
             c = conn.cursor()
             c.execute('''INSERT OR IGNORE INTO queue (url) VALUES (?)''', (url,))
             conn.commit()
+
     def add_to_queue_batch(self, urls):
         with self.open_db() as conn:
             c = conn.cursor()
@@ -110,13 +102,11 @@ class IndexDB:
             c.execute('''DELETE FROM queue WHERE url = ?''', (url,))
             conn.commit()
 
-
     def is_in_queue(self, url):
         with self.open_db() as conn:
             c = conn.cursor()
             c.execute('''SELECT url FROM queue WHERE url = ?''', (url,))
             return len(c.fetchall()) > 0
-
 
     def get_queue_batch(self, limit=1000):
         with self.open_db() as conn:
@@ -126,20 +116,17 @@ class IndexDB:
 
             return c.fetchall()
 
-
     def add_domain(self, domain):
         with self.open_db() as conn:
             c = conn.cursor()
             c.execute('''INSERT OR IGNORE INTO domains (domain) VALUES (?, ?)''', (domain))
             conn.commit()
 
-
     def check_domain(self, domain):
         with self.open_db() as conn:
             c = conn.cursor()
             c.execute('''SELECT domain FROM domains WHERE domain = ?''', (domain,))
             return c.fetchone() is not None
-
 
     def get_domains(self):
         with self.open_db() as conn:
@@ -165,60 +152,25 @@ class IndexDB:
             else:
                 return None
 
-
-
-
-
-    def manage_for_index(self, url, pairs):
+    def manage_for_index(self, url, keywords):
         with self.open_db() as conn:
             c = conn.cursor()
 
-            updates = []
-            inserts = []
-
-            for keyword, importance in pairs.items():
-                c.execute('''SELECT importance FROM keyword_index WHERE keyword = ? AND url = ?''', (keyword, url))
-                result = c.fetchone()
-
-
-
-
-                if result:
-                    new_importance = float(result[0]) + float(importance)
-                    updates.append((new_importance, keyword, url))
-
-                else:
-                    inserts.append((keyword, url, float(importance)))
-
-            if updates:
-                    c.executemany(
-                        '''UPDATE keyword_index SET importance = ? WHERE keyword = ? AND url = ?''',
-                        updates
-                    )
-            if inserts:
-                    c.executemany(
-                        '''INSERT INTO keyword_index (keyword, url, importance) VALUES (?, ?, ?)''',
-                        inserts
-                    )
+            c.executemany(
+                    '''INSERT OR IGNORE INTO keyword_index (url, keyword) VALUES (?, ?)''',
+                    [(url, keyword) for keyword in keywords]
+                )
 
             conn.commit()
-
-
-
-
-
 
     def search_index(self, keywords):
         with self.open_db() as conn:
             c = conn.cursor()
-            url_scores = {}
+            results = []
 
             for keyword in keywords:
-                c.execute('''SELECT url, importance FROM keyword_index WHERE keyword = ?''', (keyword,))
-                results = c.fetchall()
+                c.execute('''SELECT url, keyword FROM keyword_index WHERE keyword = ?''', (keyword,))
+                results += c.fetchall()
 
-                for url, importance in results:
-                    url_scores[url] = url_scores.get(url, 0.0) + importance
-
-            return url_scores
+            return results
 
