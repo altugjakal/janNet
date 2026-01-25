@@ -1,3 +1,4 @@
+
 from managers.db_manager import get_db, get_vdb
 from utils.config import Config
 from flask import Flask
@@ -57,6 +58,7 @@ def main():
 
         crawl_count += 1
 
+    vdb.save_to_disk()
 
 
 

@@ -39,8 +39,11 @@ class Search:
 
         for url, keyword in locations:
 
+            try:
+                content = make_request(url).text
+            except Exception as e:
+                continue
 
-            content = make_request(url).text
             contents[url] = content
             content, texts = reformat_html_tags(content)
 

@@ -8,10 +8,13 @@ from utils.config import Config
 class VectorDB:
     def __init__(self, dimension=Config.MODEL_OUTPUT_DIM):
 
-        self.base_index = faiss.IndexFlatL2(dimension)
-        self.index = faiss.IndexIDMap2(self.base_index)
-    
-#handle multiple passages here, id is not the unique identifier here
+        try:
+            self.index = faiss.read_index("db/index.index")
+        except (FileNotFoundError, RuntimeError):
+            self.base_index = faiss.IndexFlatL2(dimension)
+            self.index = faiss.IndexIDMap2(self.base_index)
+
+# handle multiple passages here, id is not the unique identifier here
     def insert(self, text, id):
 
         vector = self.vectorise_text(text)
@@ -57,7 +60,7 @@ class VectorDB:
             padding=True,
             truncation=True,
             return_tensors='pt'
-        )
+        ).to("mps")
 
         with torch.no_grad():
             output = model[0].auto_model(**encoded)
@@ -65,5 +68,8 @@ class VectorDB:
         token_embeddings = output.last_hidden_state
         attention_mask = encoded['attention_mask']
 
-        return token_embeddings, attention_mask
+        return token_embeddings
+
+    def save_to_disk(self):
+        faiss.write_index(self.index, "db/index.index")
 

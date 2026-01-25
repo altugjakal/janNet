@@ -9,19 +9,14 @@ class MaxSim():
     def calculate(self, term, contents):
 
         final_scores = {}
-        print(self.vdb.tokenize_text(term))
-        term_tokens = list(self.vdb.tokenize_text(term).values())
+        term_tokens = self.vdb.tokenize_text(term).squeeze(0)
         for url, content in contents.items():
             scores = []
-            content_tokens = list(self.vdb.tokenize_text(content).values())
+            content_tokens = self.vdb.tokenize_text(content).squeeze(0)
+            similarity_matrix = term_tokens @ content_tokens.T
+            max_similarities = similarity_matrix.max(dim=1).values
+            final_scores[url] = max_similarities.sum().item()
 
-            for c in content_tokens:
-                for t in term_tokens:
-                    similarity = c @ t
-                    scores.append(similarity)
-
-            final_scores[url] = max(scores)
-
-        print(final_scores)
+        return final_scores
 
 

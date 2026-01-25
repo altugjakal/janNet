@@ -2,10 +2,10 @@ from dataclasses import dataclass
 
 @dataclass
 class Config:
-    MODEL = 'all-mpnet-base-v2'
+    MODEL = 'all-distilroberta-v1'
     MODEL_OUTPUT_DIM = 768
-    VECTOR_WEIGHT = 0.4
-    LEXICAL_WEIGHT = 0.6
+    VECTOR_WEIGHT = 0.3
+    LEXICAL_WEIGHT = 0.7
 
     EDU_TLDS = [".edu"]
     AUTHORITIVE_TLDS = [".com", ".net", ".org"]
@@ -33,9 +33,5 @@ class Config:
     }
 
     SEED_URLS = [
-        "https://en.wikipedia.org/wiki/Albert_Einstein",
-        "https://en.wikipedia.org/wiki/Python_(programming_language)",
-        "https://en.wikipedia.org/wiki/Black_hole",
-        "https://en.wikipedia.org/wiki/Tokyo",
-        "https://en.wikipedia.org/wiki/The_Beatles",
+        "https://www.imdb.com/title/tt0246578/"
     ]
