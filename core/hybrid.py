@@ -44,25 +44,31 @@ class HybridSearch():
 
         all_urls = set(keyword_scores.keys()) | set(vector_scores.keys())
 
-        maxsim_scores = self.maxsim_instance.calculate(term, all_contents)
+
 
         combined_scores = {}
         for url in all_urls:
             kw = keyword_scores.get(url, 0)
             vec = vector_scores.get(url, 0)
-            maxsim = maxsim_scores.get(url, 0)
+            #maxsim = maxsim_scores.get(url, 0)
 
 
             if kw + vec < Config.SCORE_FILTER:
                 continue
 
-            combined_score = (kw_weight * kw + vector_weight * vec) * maxsim
+            combined_score = (kw_weight * kw + vector_weight * vec)
 
             combined_scores[url] = combined_score
 
-        sorted_urls = sorted(combined_scores.items(), key=lambda x: x[1], reverse=True)
+        sorted_urls = sorted(combined_scores.items(), key=lambda x: x[1], reverse=True)[:return_limit]
         for url, score in sorted_urls:
             sorted_contents[url] = all_contents[url]
+
+        maxsim_scores = self.maxsim_instance.calculate(term, sorted_contents)
+
+        final_sorted_urls = sorted(maxsim_scores.items(), key=lambda x: x[1], reverse=True)[:return_limit]
+
+
 
 
 
@@ -71,11 +77,10 @@ class HybridSearch():
         print("\nTop results:")
 
 
-        for i, (url, score) in enumerate(sorted_urls[:return_limit], 1):
+        for i, (url, score) in enumerate(final_sorted_urls, 1):
             kw = keyword_scores.get(url, 0)
             vec = vector_scores.get(url, 0)
             print(f"{i}. {url}")
-            print(f"   Combined: {score:.3f} (KW: {kw:.3f}, Vec: {vec:.3f})")
+            print(f"   Final Pool Score: {score:.3f} Initial Pool Values: (KW: {kw:.3f}, Vec: {vec:.3f})")
 
-        return [url for url, score in sorted_urls[:return_limit]], [content for content in
-                                                                    list(sorted_contents.values())[:return_limit]]
+        return [url for url, score in final_sorted_urls], [content for content in list(sorted_contents.values())]
