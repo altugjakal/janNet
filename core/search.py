@@ -37,12 +37,8 @@ class Search:
 
         locations = self.db.search_index(terms)
 
-        for url, keyword in locations:
+        for url, keyword, content in locations:
 
-            try:
-                content = make_request(url).text
-            except Exception as e:
-                continue
 
             contents[url] = content
             content, texts = reformat_html_tags(content)

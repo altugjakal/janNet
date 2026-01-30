@@ -48,7 +48,7 @@ def make_request(url):
     url = url.rstrip("/")
 
     try:
-        response = requests.get(url, headers=headers, timeout=10, allow_redirects=True)
+        response = requests.get(url, headers=headers, timeout=15, allow_redirects=True)
         return response
 
     except requests.RequestException as e:

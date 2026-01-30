@@ -24,6 +24,8 @@ class HybridSearch:
         v_search_instance = self.v_search_instance
         kw_search_instance = self.kw_search_instance
 
+        #might have tampered with the content here
+
         keyword_scores, keyword_content = kw_search_instance.search(term)
         vector_scores, vector_content = v_search_instance.search(term)
 
@@ -58,8 +60,12 @@ class HybridSearch:
 
         sorted_urls = sorted(combined_scores.items(), key=lambda x: x[1], reverse=True)[:return_limit]
         for url, score in sorted_urls:
-            sorted_contents[url] = all_contents[url]
-            print(f"Passed: {url}")
+            try:
+                sorted_contents[url] = all_contents[url]
+                print(f"Passed: {url}")
+            except KeyError:
+                print(f"Failed: {url}")
+                continue
 
 
         #below this point is where the magic happens

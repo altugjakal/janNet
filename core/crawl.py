@@ -18,8 +18,6 @@ class Crawl():
         self.db = db
         self.vdb = vdb
 
-
-
     def crawl(self, url):
         # Check if already visited
 
@@ -30,13 +28,13 @@ class Crawl():
             self.db.drop_from_queue(url)
             return
 
-        # Mark as crawled
-        self.db.add_url(url)
-        self.db.drop_from_queue(url)
+
 
         try:
             content = make_request(url).text
         except Exception as e:
+            print("Crawling failed for: ", url)
+            print(e)
             return
 
 
@@ -58,11 +56,16 @@ class Crawl():
                 self.db.add_to_queue(absolute_url)
                 new_count += 1
 
+
+
         if new_count > 0:
             print(f"  → Queued {new_count} new URLs")
 
         # Index content
         content, texts = reformat_html_tags(content)
+
+        self.db.drop_from_queue(url)
+        self.db.add_url(url, content)
 
         #add overlap logic
         words = content.split()
@@ -71,7 +74,6 @@ class Crawl():
             chunk_id = hash((url, i)) % (10 ** 9)
             self.vdb.insert(text=chunk, id=chunk_id)
             self.db.manage_vector_for_index(url=url, emb_id=chunk_id)
-
 
         self.db.manage_for_index(url=url, keywords=extract_keywords(content))
 

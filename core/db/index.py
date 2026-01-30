@@ -9,6 +9,7 @@ class IndexDB:
 
             c.execute('''CREATE TABLE IF NOT EXISTS urls
                          (url TEXT PRIMARY KEY,
+                         content TEXT NOT NULL,
                           crawled_at TIMESTAMP NOT NULL default CURRENT_TIMESTAMP)''')
 
             # Queue table
@@ -50,10 +51,10 @@ class IndexDB:
         finally:
             conn.close()
 
-    def add_url(self, url):
+    def add_url(self, url, content):
         with self.open_db() as conn:
             c = conn.cursor()
-            c.execute('''INSERT OR IGNORE INTO urls (url) VALUES (?)''', (url,))
+            c.execute('''INSERT OR IGNORE INTO urls (url, content) VALUES (?, ?)''', (url, content))
             conn.commit()
 
     def is_url_visited(self, url):
@@ -144,13 +145,12 @@ class IndexDB:
     def get_url_by_vector_id(self, vector_id):
         with self.open_db() as conn:
             c = conn.cursor()
-            c.execute('''SELECT url FROM vector_index WHERE embedding_id = ?''', (vector_id,))
+            c.execute('''SELECT vector_index.url, urls.content FROM vector_index LEFT JOIN urls ON vector_index.url = 
+            urls.url WHERE embedding_id = ?''', (vector_id,))
             result = c.fetchone()
 
-            if result:
-                return result[0]
-            else:
-                return None
+
+            return result
 
     def manage_for_index(self, url, keywords):
         with self.open_db() as conn:
@@ -169,7 +169,7 @@ class IndexDB:
             results = []
 
             for keyword in keywords:
-                c.execute('''SELECT url, keyword FROM keyword_index WHERE keyword = ?''', (keyword,))
+                c.execute('''SELECT keyword_index.url, keyword_index.keyword, urls.content FROM keyword_index LEFT JOIN urls ON urls.url = keyword_index.url WHERE keyword = ?''', (keyword,))
                 results += c.fetchall()
 
             return results
