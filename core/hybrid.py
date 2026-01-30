@@ -4,9 +4,9 @@ from utils.config import Config
 from core.maxsim import MaxSim
 
 
-class HybridSearch():
+class HybridSearch:
 
-    def __init__(self, vector_weight=Config.VECTOR_WEIGHT, kw_weight=Config.LEXICAL_WEIGHT, return_limit=5, vdb=None,
+    def __init__(self, vector_weight=Config.VECTOR_WEIGHT, kw_weight=Config.LEXICAL_WEIGHT, return_limit=Config.RETURN_LIMIT, vdb=None,
                  db=None):
         self.vector_weight = vector_weight
         self.kw_weight = kw_weight
@@ -44,14 +44,10 @@ class HybridSearch():
 
         all_urls = set(keyword_scores.keys()) | set(vector_scores.keys())
 
-
-
         combined_scores = {}
         for url in all_urls:
             kw = keyword_scores.get(url, 0)
             vec = vector_scores.get(url, 0)
-            #maxsim = maxsim_scores.get(url, 0)
-
 
             if kw + vec < Config.SCORE_FILTER:
                 continue
@@ -63,19 +59,20 @@ class HybridSearch():
         sorted_urls = sorted(combined_scores.items(), key=lambda x: x[1], reverse=True)[:return_limit]
         for url, score in sorted_urls:
             sorted_contents[url] = all_contents[url]
+            print(f"Passed: {url}")
+
+
+        #below this point is where the magic happens
+
 
         maxsim_scores = self.maxsim_instance.calculate(term, sorted_contents)
 
-        final_sorted_urls = sorted(maxsim_scores.items(), key=lambda x: x[1], reverse=True)[:return_limit]
 
-
-
-
+        final_sorted_urls = sorted(maxsim_scores.items(), key=lambda x: x[1], reverse=True)
 
         print(f"\nHybrid search for '{term}' (KW: {kw_weight}, Vec: {vector_weight})")
         print(f"Found: {len(keyword_scores)} keyword, {len(vector_scores)} vector, {len(all_urls)} total")
         print("\nTop results:")
-
 
         for i, (url, score) in enumerate(final_sorted_urls, 1):
             kw = keyword_scores.get(url, 0)
