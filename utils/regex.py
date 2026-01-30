@@ -53,6 +53,12 @@ def reformat_html_tags(html_content):
     texts = [[re.sub(r'&[a-zA-Z0-9#]+;', ' ', item) for item in sublist] for sublist in texts]
     texts = [[re.sub(r'\s+', ' ', item).strip() for item in sublist] for sublist in texts]
 
+
+
+    return texts
+
+def html_to_clean(html):
+
     clean_html = lambda html: re.sub(
         r'<(header|nav|footer|aside|script|style|iframe|noscript|form|button|svg)[^>]*>.*?</\1>|<!--.*?-->',
         '',
@@ -60,15 +66,13 @@ def reformat_html_tags(html_content):
         flags=re.DOTALL | re.IGNORECASE
     )
 
-    html_out = clean_html(html_content)
+    html_out = clean_html(html)
     html_out = re.sub(r'\s+', ' ', html_out).strip()
     html_out = re.sub(r'<(script|style).*?>.*?</\1>', '', html_out, flags=re.DOTALL | re.IGNORECASE)
     html_out = re.sub(r'<[^>]+>', ' ', html_out)
     html_out = re.sub(r'&[a-zA-Z0-9#]+;', ' ', html_out)
     html_out = re.sub(r'\s+', ' ', html_out).strip()
-
-    return html_out, texts
-
+    return html_out
 
 def extract_anchors(html_content):
     html_content = html_content.lower()

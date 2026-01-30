@@ -1,7 +1,7 @@
 import re
 import requests
 
-from utils.regex import reformat_html_tags
+from utils.regex import reformat_html_tags, html_to_clean
 
 from nltk.stem import PorterStemmer
 from nltk.corpus import stopwords
@@ -67,7 +67,8 @@ def site_details(url=None, content=None):  #extract details from the given conte
             return "No title available", "No description available", "No content available"
 
     if content:
-        reformatted_content, texts = reformat_html_tags(content)
+        texts = reformat_html_tags(content)
+        reformatted_content = html_to_clean(content)
         description = texts[8][0] if texts[8] else texts[7][0] if texts[7] else texts[6][0] if texts[
             6] else "No description available"
         title = texts[0][0] if texts[0] else "No title available"

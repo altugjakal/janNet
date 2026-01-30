@@ -3,7 +3,7 @@ from math import log1p
 import time
 from utils.config import Config
 from managers.db_manager import get_db, get_vdb
-from utils.regex import extract_anchors, reformat_html_tags
+from utils.regex import extract_anchors, reformat_html_tags, html_to_clean
 from utils.misc import extract_keywords, make_request
 import tldextract
 
@@ -48,6 +48,8 @@ class Crawl():
 
             if not absolute_url.startswith(("http://", "https://")):
                 continue
+            if absolute_url.endswith(Config.DESIGN_FILE_EXTS):
+                continue
 
             absolute_url = absolute_url.rstrip("/")
             absolute_url = absolute_url.split("#")[0]
@@ -62,13 +64,14 @@ class Crawl():
             print(f"  → Queued {new_count} new URLs")
 
         # Index content
-        content, texts = reformat_html_tags(content)
+        texts = reformat_html_tags(content)
 
         self.db.drop_from_queue(url)
         self.db.add_url(url, content)
 
         #add overlap logic
-        words = content.split()
+        clean_content = html_to_clean(content)
+        words = clean_content.split()
         for i in range(0, len(words), 400):
             chunk = ' '.join(words[i:i + 400])
             chunk_id = hash((url, i)) % (10 ** 9)

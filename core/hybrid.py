@@ -2,6 +2,7 @@ from core.search import Search
 from core.vector_search import VectorSearch
 from utils.config import Config
 from core.maxsim import MaxSim
+from utils.regex import html_to_clean
 
 
 class HybridSearch:
@@ -31,6 +32,7 @@ class HybridSearch:
 
         all_contents = keyword_content | vector_content
         sorted_contents = {}
+        clean_sorted_contents = {}
 
         def normalize(scores):
             if not scores:
@@ -62,6 +64,7 @@ class HybridSearch:
         for url, score in sorted_urls:
             try:
                 sorted_contents[url] = all_contents[url]
+                clean_sorted_contents[url] = html_to_clean(all_contents[url])
                 print(f"Passed: {url}")
             except KeyError:
                 print(f"Failed: {url}")

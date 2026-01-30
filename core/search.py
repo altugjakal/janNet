@@ -9,7 +9,7 @@ from utils.config import Config
 from utils.misc import make_request
 from utils.misc import extract_keywords
 from core.subscore import SubScore
-from utils.regex import reformat_html_tags
+from utils.regex import reformat_html_tags, html_to_clean
 
 
 class Search:
@@ -41,7 +41,7 @@ class Search:
 
 
             contents[url] = content
-            content, texts = reformat_html_tags(content)
+            texts = reformat_html_tags(content)
 
 
             url_obj = urlparse(url)
@@ -74,7 +74,7 @@ class Search:
                             url_temp_scores[url].append(importance)
 
             for url, importances in url_temp_scores.items():
-                url_scores[url] = SubScore.get_url_rank(url, fmean(importances))
+                url_scores[url] = SubScore.get_url_rank(url, sum(importances))
 
 
         return url_scores, contents

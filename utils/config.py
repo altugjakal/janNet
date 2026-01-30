@@ -34,46 +34,9 @@ class Config:
     }
 
     SEED_URLS = [
-          "https://www.eecs.mit.edu/",
-  "https://cs.stanford.edu/",
-  "https://www.cs.cmu.edu/",
-  "https://eecs.berkeley.edu/",
-  "https://www.cms.caltech.edu/",
-  "https://www.cs.cornell.edu/",
-  "https://www.cs.princeton.edu/",
-  "https://seas.harvard.edu/computer-science",
-  "https://cpsc.yale.edu/",
-  "https://www.cs.columbia.edu/",
-  "https://www.cis.upenn.edu/",
-  "https://cs.brown.edu/",
-  "https://web.cs.dartmouth.edu/",
-  "https://cs.illinois.edu/",
-  "https://www.cs.washington.edu/",
-  "https://www.cc.gatech.edu/",
-  "https://cse.engin.umich.edu/",
-  "https://www.cs.ucla.edu/",
-  "https://cse.ucsd.edu/",
-  "https://www.cs.utexas.edu/",
-  "https://www.cs.wisc.edu/",
-  "https://www.cs.umd.edu/",
-  "https://www.cs.purdue.edu/",
-  "https://cs.duke.edu/",
-  "https://www.mccormick.northwestern.edu/computer-science/",
-  "https://cs.rice.edu/",
-  "https://www.cs.jhu.edu/",
-  "https://www.cs.virginia.edu/",
-  "https://www.csc.ncsu.edu/",
-  "https://www.cs.unc.edu/",
-  "https://cse.osu.edu/",
-  "https://www.cs.rutgers.edu/",
-  "https://www.cs.usc.edu/",
-  "https://cs.nyu.edu/",
-  "https://www.cs.rochester.edu/",
-  "https://www.cs.stonybrook.edu/",
-  "https://www.cs.bu.edu/",
-  "https://www.khoury.northeastern.edu/",
-  "https://www.cs.tufts.edu/",
-  "https://www.cs.colorado.edu/",
-  "https://www.cs.arizona.edu/",
-  "https://www.cs.utah.edu/"
+          "https://www.cs.stanford.edu/people-cs"
+
+
     ]
+
+    DESIGN_FILE_EXTS= (".png", ".jpg", ".jpeg", ".ico", ".webp", ".svg", ".css", ".docx")
