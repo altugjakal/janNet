@@ -1,8 +1,7 @@
-from core.subscore import SubScore
-from utils.misc import make_request
 
 
-class VectorSearch():
+
+class SemanticSearch():
     def __init__(self, db=None, vdb=None):
         self.db = db
         self.vdb = vdb
@@ -15,13 +14,11 @@ class VectorSearch():
 
         url_scores = {}
         url_contents = {}
-        results = []
 
         for vector in vectors:
 
             url, content = self.db.get_url_by_vector_id(vector['id'])
 
-            score = SubScore.get_url_rank(url, vector['score'])
             url_scores[url] = vector['score']
             url_contents[url] = content
 

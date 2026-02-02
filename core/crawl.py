@@ -1,11 +1,9 @@
 import random
-from math import log1p
 import time
 from utils.config import Config
 from managers.db_manager import get_db, get_vdb
 from utils.regex import extract_anchors, reformat_html_tags, html_to_clean
 from utils.misc import extract_keywords, make_request
-import tldextract
 
 from urllib.parse import urljoin, urlparse
 
@@ -24,9 +22,6 @@ class Crawl():
         sleep_median = self.sleep_median
         sleep_padding = self.sleep_padding
 
-        if self.db.is_url_visited(url):
-            self.db.drop_from_queue(url)
-            return
 
 
 
@@ -34,9 +29,8 @@ class Crawl():
             content = make_request(url).text
         except Exception as e:
             print("Crawling failed for: ", url)
-            print(e)
+            self.db.drop_from_queue(url)
             return
-
 
 
         anchors = extract_anchors(content)
@@ -45,14 +39,18 @@ class Crawl():
         new_count = 0
         for anchor in anchors:
             absolute_url = urljoin(url, anchor)
+            absolute_url = absolute_url.rstrip("/")
+            absolute_url = absolute_url.split("#")[0]
+
+
+            if self.db.is_url_visited(absolute_url):
+                continue
 
             if not absolute_url.startswith(("http://", "https://")):
                 continue
+
             if absolute_url.endswith(Config.DESIGN_FILE_EXTS):
                 continue
-
-            absolute_url = absolute_url.rstrip("/")
-            absolute_url = absolute_url.split("#")[0]
 
             if not self.db.is_url_visited(absolute_url) and not self.db.is_in_queue(absolute_url):
                 self.db.add_to_queue(absolute_url)
@@ -63,8 +61,6 @@ class Crawl():
         if new_count > 0:
             print(f"  → Queued {new_count} new URLs")
 
-        # Index content
-        texts = reformat_html_tags(content)
 
         self.db.drop_from_queue(url)
         self.db.add_url(url, content)

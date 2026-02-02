@@ -4,8 +4,8 @@ from dataclasses import dataclass
 class Config:
     MODEL = 'all-distilroberta-v1'
     MODEL_OUTPUT_DIM = 768
-    VECTOR_WEIGHT = 0.3
-    LEXICAL_WEIGHT = 0.7
+    VECTOR_WEIGHT = 0.4
+    LEXICAL_WEIGHT = 0.6
 
     EDU_TLDS = [".edu"]
     AUTHORITIVE_TLDS = [".com", ".net", ".org"]
@@ -14,7 +14,9 @@ class Config:
     EDU_MULT = 2.0
     MAX_CRAWLS = 10000
     RETURN_LIMIT = 100
-    SCORE_FILTER = 0.400
+    SCORE_FILTER = 0.050
+
+    FIRST_POOL_SIZE = 10
 
     HTML_IMPORTANCE_MAP = {
         "title": 10,
@@ -35,7 +37,6 @@ class Config:
 
     SEED_URLS = [
           "https://www.cs.stanford.edu/people-cs"
-
 
     ]
 

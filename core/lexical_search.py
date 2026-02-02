@@ -1,3 +1,4 @@
+import urllib
 from collections import defaultdict
 from math import log1p
 from statistics import fmean
@@ -8,13 +9,14 @@ import tldextract
 from utils.config import Config
 from utils.misc import make_request
 from utils.misc import extract_keywords
-from core.subscore import SubScore
-from utils.regex import reformat_html_tags, html_to_clean
+from utils.regex import reformat_html_tags, html_to_clean, get_domain, get_tld
 
 
-class Search:
+class LexicalSearch:
     def __init__(self, db):
         self.db = db
+
+
 
     def assign_importance(self, content, keyword, element_type):
         tf = content.lower().count(keyword.lower())
@@ -32,17 +34,14 @@ class Search:
         url_temp_scores = defaultdict(list)
         url_scores = defaultdict(int)
 
-
         contents = {}
 
         locations = self.db.search_index(terms)
 
         for url, keyword, content in locations:
 
-
             contents[url] = content
             texts = reformat_html_tags(content)
-
 
             url_obj = urlparse(url)
             domain = tldextract.extract(url).domain
@@ -74,7 +73,6 @@ class Search:
                             url_temp_scores[url].append(importance)
 
             for url, importances in url_temp_scores.items():
-                url_scores[url] = SubScore.get_url_rank(url, sum(importances))
-
+                url_scores[url] = sum(importances)
 
         return url_scores, contents

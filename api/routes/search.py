@@ -1,6 +1,6 @@
 from managers.db_manager import get_vdb, get_db
 from core.hybrid import HybridSearch
-from utils.regex import  get_domain
+from utils.regex import get_domain, html_to_clean
 from flask import jsonify, Blueprint
 from utils.misc import site_details
 
@@ -17,11 +17,12 @@ def search_route(term):
 
     for result, content in zip(results, contents):
         title, description, site_content = site_details(result, content)
+        cleaned_content = html_to_clean(site_content)
 
 
         site_data.append({
             'url': result,
-            'content': content,
+            'content': cleaned_content,
             'title': title,
             'description': description,
             'domain': get_domain(result),
@@ -29,9 +30,10 @@ def search_route(term):
 
         })
 
+
+
     return jsonify({
-        'results': site_data,
-        'contents': contents
+        'results': site_data
     })
 
 

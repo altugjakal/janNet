@@ -51,7 +51,8 @@ class VectorDB:
 
     def vectorise_text(self, text):
         model = get_model()
-        return model.encode(text)
+        vector = model.encode(text)
+        return vector / np.linalg.norm(vector)
 
     def tokenize_text(self, text):
         model = get_model()

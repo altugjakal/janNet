@@ -1,8 +1,6 @@
 import re
 import requests
-
 from utils.regex import reformat_html_tags, html_to_clean
-
 from nltk.stem import PorterStemmer
 from nltk.corpus import stopwords
 import numpy as np

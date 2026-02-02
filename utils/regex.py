@@ -57,22 +57,40 @@ def reformat_html_tags(html_content):
 
     return texts
 
+
 def html_to_clean(html):
+    # Remove comments first
+    html = re.sub(r'<!--.*?-->', '', html, flags=re.DOTALL)
 
-    clean_html = lambda html: re.sub(
-        r'<(header|nav|footer|aside|script|style|iframe|noscript|form|button|svg)[^>]*>.*?</\1>|<!--.*?-->',
-        '',
-        html,
-        flags=re.DOTALL | re.IGNORECASE
-    )
+    # Remove script and style tags (these are most important)
+    html = re.sub(r'<script[^>]*>.*?</script>', '', html, flags=re.DOTALL | re.IGNORECASE)
+    html = re.sub(r'<style[^>]*>.*?</style>', '', html, flags=re.DOTALL | re.IGNORECASE)
 
-    html_out = clean_html(html)
-    html_out = re.sub(r'\s+', ' ', html_out).strip()
-    html_out = re.sub(r'<(script|style).*?>.*?</\1>', '', html_out, flags=re.DOTALL | re.IGNORECASE)
-    html_out = re.sub(r'<[^>]+>', ' ', html_out)
-    html_out = re.sub(r'&[a-zA-Z0-9#]+;', ' ', html_out)
-    html_out = re.sub(r'\s+', ' ', html_out).strip()
-    return html_out
+    # Remove head entirely
+    html = re.sub(r'<head[^>]*>.*?</head>', '', html, flags=re.DOTALL | re.IGNORECASE)
+
+    # Remove header, nav, footer, aside (run multiple times for nested)
+    for _ in range(5):
+        html = re.sub(r'<header[^>]*>.*?</header>', '', html, flags=re.DOTALL | re.IGNORECASE)
+        html = re.sub(r'<nav[^>]*>.*?</nav>', '', html, flags=re.DOTALL | re.IGNORECASE)
+        html = re.sub(r'<footer[^>]*>.*?</footer>', '', html, flags=re.DOTALL | re.IGNORECASE)
+        html = re.sub(r'<aside[^>]*>.*?</aside>', '', html, flags=re.DOTALL | re.IGNORECASE)
+
+    # Remove other junk tags
+    html = re.sub(r'<(iframe|noscript|form|button|svg|input|select|textarea)[^>]*>.*?</\1>', '', html,
+                  flags=re.DOTALL | re.IGNORECASE)
+    html = re.sub(r'<(iframe|noscript|form|button|svg|input|select|textarea)[^>]*/>', '', html, flags=re.IGNORECASE)
+
+    # Remove all remaining tags
+    html = re.sub(r'<[^>]+>', ' ', html)
+
+    # Remove HTML entities
+    html = re.sub(r'&[a-zA-Z0-9#]+;', ' ', html)
+
+    # Clean whitespace
+    html = re.sub(r'\s+', ' ', html).strip()
+
+    return html
 
 def extract_anchors(html_content):
     html_content = html_content.lower()

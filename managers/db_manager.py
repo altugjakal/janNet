@@ -1,5 +1,5 @@
-from core.db.vectordb import VectorDB
-from core.db.index import IndexDB
+from core.db.vector_db import VectorDB
+from core.db.index_db import IndexDB
 
 _db = None
 _vdb = None
