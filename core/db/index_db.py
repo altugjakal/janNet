@@ -1,6 +1,6 @@
 import sqlite3
 from contextlib import contextmanager
-
+from core.db.thread_lock_wrapper import locked
 
 class IndexDB:
     def __init__(self):
@@ -15,6 +15,7 @@ class IndexDB:
             # Queue table
             c.execute('''CREATE TABLE IF NOT EXISTS queue
                          (url TEXT PRIMARY KEY,
+                         issuer_thread_id INTEGER NOT NULL,
                           added_at TIMESTAMP NOT NULL default CURRENT_TIMESTAMP)''')
 
             # Domains table
@@ -42,7 +43,7 @@ class IndexDB:
             conn.commit()
 
     @contextmanager
-    def open_db(self, db_path='db/general.db'):
+    def open_db(self, db_path="db/general.db"):
 
         conn = sqlite3.connect(db_path)
         try:
@@ -51,90 +52,106 @@ class IndexDB:
         finally:
             conn.close()
 
+    @locked
     def add_url(self, url, content):
         with self.open_db() as conn:
             c = conn.cursor()
             c.execute('''INSERT OR IGNORE INTO urls (url, content) VALUES (?, ?)''', (url, content))
             conn.commit()
 
+    @locked
     def is_url_visited(self, url):
         with self.open_db() as conn:
             c = conn.cursor()
             c.execute('''SELECT url FROM urls WHERE url = ?''', (url,))
             return c.fetchone() is not None
 
-    def add_to_queue(self, url):
+    @locked
+    def add_to_queue(self, url, thread_id):
         with self.open_db() as conn:
             c = conn.cursor()
-            c.execute('''INSERT OR IGNORE INTO queue (url) VALUES (?)''', (url,))
+            c.execute('''INSERT OR IGNORE INTO queue (url, issuer_thread_id) VALUES (?, ?)''', (url, thread_id))
             conn.commit()
 
-    def add_to_queue_batch(self, urls):
+    @locked
+    def add_to_queue_batch(self, urls, thread_id):
         with self.open_db() as conn:
             c = conn.cursor()
             c.executemany(
-                '''INSERT OR IGNORE INTO queue (url) VALUES (?)''',
-                [(url,) for url in urls]
+                '''INSERT OR IGNORE INTO queue (url, issuer_thread_id) VALUES (?, ?)''',
+                [(url, thread_id) for url in urls]
             )
             conn.commit()
 
+    @locked
     def get_total_kw_count(self, keyword):
         with self.open_db() as conn:
             c = conn.cursor()
             c.execute('''SELECT COUNT(*) FROM keyword_index WHERE keyword = ?''', (keyword,))
             return c.fetchone()[0]
 
+
+    @locked
     def get_total_url_count(self):
         with self.open_db() as conn:
             c = conn.cursor()
             c.execute('''SELECT COUNT(*) FROM urls''')
             return c.fetchone()[0]
 
-    def get_queue_size(self):
+
+    @locked
+    def get_queue_size(self, thread_id):
         """Get current queue size"""
         with self.open_db() as conn:
             c = conn.cursor()
-            c.execute('''SELECT COUNT(*) FROM queue''')
+            c.execute('''SELECT COUNT(*) FROM queue WHERE issuer_thread_id = ? ''', (thread_id,))
             return c.fetchone()[0]
 
-    def drop_from_queue(self, url):
+    @locked
+    def drop_from_queue(self, url, thread_id):
         with self.open_db() as conn:
             c = conn.cursor()
-            c.execute('''DELETE FROM queue WHERE url = ?''', (url,))
+            c.execute('''DELETE FROM queue WHERE url = ? AND issuer_thread_id = ?''', (url, thread_id))
             conn.commit()
 
-    def is_in_queue(self, url):
+    @locked
+    def is_in_queue(self, url, thread_id):
         with self.open_db() as conn:
             c = conn.cursor()
-            c.execute('''SELECT url FROM queue WHERE url = ?''', (url,))
+            c.execute('''SELECT url FROM queue WHERE url = ? AND issuer_thread_id = ?''', (url, thread_id))
             return len(c.fetchall()) > 0
 
-    def get_queue_batch(self, limit=1000):
+    @locked
+    def get_queue_batch(self, thread_id, limit=1000):
         with self.open_db() as conn:
             c = conn.cursor()
-            c.execute('''SELECT url FROM queue ORDER BY added_at ASC LIMIT ?''',
-                      (limit,))
+            c.execute('''SELECT url FROM queue WHERE issuer_thread_id = ? ORDER BY added_at ASC LIMIT ?''',
+                      (thread_id, limit))
 
             return c.fetchall()
 
+    @locked
     def add_domain(self, domain):
         with self.open_db() as conn:
             c = conn.cursor()
             c.execute('''INSERT OR IGNORE INTO domains (domain) VALUES (?, ?)''', (domain))
             conn.commit()
 
+    @locked
     def check_domain(self, domain):
         with self.open_db() as conn:
             c = conn.cursor()
             c.execute('''SELECT domain FROM domains WHERE domain = ?''', (domain,))
             return c.fetchone() is not None
 
+    @locked
     def get_domains(self):
         with self.open_db() as conn:
             c = conn.cursor()
             c.execute('''SELECT domain FROM domains''')
             return c.fetchall()
 
+    @locked
     def manage_vector_for_index(self, url, emb_id):
         with self.open_db() as conn:
             c = conn.cursor()
@@ -142,6 +159,7 @@ class IndexDB:
                     url) VALUES (?, ?)''', (emb_id, url))
             conn.commit()
 
+    @locked
     def get_url_by_vector_id(self, vector_id):
         with self.open_db() as conn:
             c = conn.cursor()
@@ -152,6 +170,7 @@ class IndexDB:
 
             return result
 
+    @locked
     def manage_for_index(self, url, keywords):
         with self.open_db() as conn:
             c = conn.cursor()
@@ -163,6 +182,7 @@ class IndexDB:
 
             conn.commit()
 
+    @locked
     def search_index(self, keywords):
         with self.open_db() as conn:
             c = conn.cursor()

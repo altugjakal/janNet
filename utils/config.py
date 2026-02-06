@@ -1,6 +1,3 @@
-from dataclasses import dataclass
-
-@dataclass
 class Config:
     MODEL = 'all-distilroberta-v1'
     MODEL_OUTPUT_DIM = 768
@@ -32,12 +29,17 @@ class Config:
         "subdomain": 2,
         "path": 2,
         "param": 3
-
     }
 
     SEED_URLS = [
-          "https://www.cs.stanford.edu/people-cs"
-
+        ["https://www.cs.stanford.edu/people-cs"],
+        ["https://www.cs.stanford.edu/"],
+        ["https://onlinesourcerer.org/"],
+        ["https://cs.princeton.edu/"],
+        ["https://www.cs.cmu.edu/"]
     ]
 
-    DESIGN_FILE_EXTS= (".png", ".jpg", ".jpeg", ".ico", ".webp", ".svg", ".css", ".docx")
+    DESIGN_FILE_EXTS = (".png", ".jpg", ".jpeg", ".ico", ".webp", ".svg", ".css", ".docx")
+    THREAD_COUNT = 5
+
+    assert len(SEED_URLS) == THREAD_COUNT

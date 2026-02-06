@@ -8,21 +8,7 @@ import numpy as np
 stop_words = set(stopwords.words('english'))
 
 
-def clamp_search_term(term):
-    if len(term.split()) > 1:
-        #stick words side by side
-        terms = term.split()
-        alt_list = []
-        for term in terms:
-            term = term.strip()
-            alt_list.append(term + term[::-1])
-
-        return alt_list
-    else:
-        return []
-
-
-def extract_keywords(text):
+def extract_words(text):
     stemmer = PorterStemmer()
     words = re.findall(r'\b[a-zA-Z]+\b', text.lower())
 
@@ -51,7 +37,7 @@ def make_request(url):
 
     except requests.RequestException as e:
         print(f"Request failed for {url}")
-        return None
+        return e
 
 
 def site_details(url=None, content=None):  #extract details from the given content, if given
@@ -76,11 +62,3 @@ def site_details(url=None, content=None):  #extract details from the given conte
         return "No title available", "No description available", "No content available"
 
 
-#below this line is the db misc tools
-
-def cosine_similarity(vector1, vector2):
-    vector1 = vector1.flatten()
-    vector2 = vector2.flatten()
-    similarity = np.dot(vector1, vector2) / (np.linalg.norm(vector1) * np.linalg.norm(vector2))
-
-    return similarity

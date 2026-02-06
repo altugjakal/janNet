@@ -3,6 +3,7 @@ import torch
 from managers.model_manager import get_model
 import numpy as np
 import faiss
+from core.db.thread_lock_wrapper import locked
 from utils.config import Config
 
 class VectorDB:
@@ -15,6 +16,7 @@ class VectorDB:
             self.index = faiss.IndexIDMap2(self.base_index)
 
 # handle multiple passages here, id is not the unique identifier here
+    @locked
     def insert(self, text, id):
 
         vector = self.vectorise_text(text)
@@ -27,14 +29,16 @@ class VectorDB:
         except Exception as e:
             print(e)
 
-
+    @locked
     def delete(self, id):
         id_to_remove = np.array([id], dtype='int64')
         self.index.remove_ids(id_to_remove)
 
+    @locked
     def find(self, id):
         self.index.reconstruct(id)
 
+    @locked
     def euclidian_d(self, query_vector, k=10):
         faiss.omp_set_num_threads(1)
         query = np.array([query_vector]).astype('float32')
@@ -49,10 +53,12 @@ class VectorDB:
             if id != -1
         ]
 
+
     def vectorise_text(self, text):
         model = get_model()
         vector = model.encode(text)
         return vector / np.linalg.norm(vector)
+
 
     def tokenize_text(self, text):
         model = get_model()

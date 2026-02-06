@@ -1,21 +1,21 @@
-from core.db.vector_db import VectorDB
-from core.db.index_db import IndexDB
 
-_db = None
-_vdb = None
+
+import threading
+
+_local = threading.local()
+_db_lock = threading.Lock()
 
 def get_vdb():
-    global _vdb
-    if _vdb is None:
-        _vdb = VectorDB()
-        return _vdb
-    else:
-        return _vdb
+    if not hasattr(_local, 'vdb'):
+        from core.db.vector_db import VectorDB
+        _local.vdb = VectorDB()
+    return _local.vdb
 
 def get_db():
-    global _db
-    if _db is None:
-        _db = IndexDB()
-        return _db
-    else:
-        return _db
+    if not hasattr(_local, 'db'):
+        from core.db.index_db import IndexDB
+        _local.db = IndexDB()
+    return _local.db
+
+def get_db_lock():
+    return _db_lock

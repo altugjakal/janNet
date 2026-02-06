@@ -8,7 +8,7 @@ import tldextract
 
 from utils.config import Config
 from utils.misc import make_request
-from utils.misc import extract_keywords
+from utils.misc import extract_words
 from utils.regex import reformat_html_tags, html_to_clean, get_domain, get_tld
 
 
@@ -29,7 +29,7 @@ class LexicalSearch:
         return base_importance
 
     def search(self, term):
-        terms = extract_keywords(term)
+        terms = extract_words(term)
 
         url_temp_scores = defaultdict(list)
         url_scores = defaultdict(int)
