@@ -13,15 +13,16 @@ A hybrid search engine combining traditional keyword matching with neural vector
 - [x] Hybrid TFIDF + vector search
 - [x] FAISS integration
 - [x] Depth-aware ranking
-- [ ] MaxSim re-ranking (late-interaction scoring)
-- [ ] Handle multiple passages (getting hte most relevant passage)
+- [x] MaxSim re-ranking (late-interaction scoring)
+- [x] Handle multiple passages (getting the most relevant passage)
 - [ ] Domain authority signals
+- [ ] Distributed system adaptation
 - [x] Web UI
 - [x] API endpoints
 
 ## Performance
 
-*Benchmarks coming soon*
+*Benchmarks coming soon' could use additional help here*
 
 ## Use Cases
 
