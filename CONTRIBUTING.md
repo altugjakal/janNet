@@ -26,8 +26,7 @@ python main.py
 
 ## What We're Looking For
 
-- [ ] MaxSim re-ranking implementation
-
+- [ ] Benchmarks
 ## Pull Requests
 
 1. Keep PRs focused on a single feature/fix
