@@ -14,14 +14,12 @@ class SemanticSearch():
 
         url_scores = {}
         url_contents = {}
-
         for vector in vectors:
 
             url, content = self.db.get_url_by_vector_id(vector['id'])
 
             url_scores[url] = vector['score']
             url_contents[url] = content
-
 
         return url_scores, url_contents
 

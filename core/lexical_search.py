@@ -16,27 +16,35 @@ class LexicalSearch:
     def __init__(self, db):
         self.db = db
 
-
-
-    def assign_importance(self, content, keyword, element_type):
-        tf = content.lower().count(keyword.lower())
+    def assign_importance_by_frequency(self, text, keyword, total_url_count, kw_count):
+        tf = text.lower().count(keyword.lower())
         tf = 1 + log1p(tf)
         tf_capped = min(tf, 3)
-        idf = log1p(self.db.get_total_url_count() / max(1, self.db.get_total_kw_count(keyword.lower())))
+        idf = log1p(total_url_count / max(1, kw_count))
         tfidf = tf_capped * idf
         phrase_bonus = len(keyword.split()) * 0.5
-        base_importance = Config.HTML_IMPORTANCE_MAP.get(element_type, 1) * tfidf * (1 + phrase_bonus)
+        base_importance = tfidf * (1 + phrase_bonus)
+        return base_importance
+
+    def assign_importance_by_location(self, element_type):
+        base_importance = Config.HTML_IMPORTANCE_MAP.get(element_type, 1)
         return base_importance
 
     def search(self, term):
         terms = extract_words(term)
 
-        url_temp_scores = defaultdict(list)
-        url_scores = defaultdict(int)
+        url_temp_scores = defaultdict(int)
+
+        total_url_count = self.db.get_total_url_count()
 
         contents = {}
+        kw_counts = {}
 
         locations = self.db.search_index(terms)
+        for term in terms:
+            kw_counts[term] = self.db.get_total_kw_count(term.lower())
+
+
 
         for url, keyword, content in locations:
 
@@ -69,10 +77,8 @@ class LexicalSearch:
                 for text in text_items:
                     for search_term in terms:
                         if search_term.lower() in text.lower():
-                            importance = self.assign_importance(text, search_term, element_type)
-                            url_temp_scores[url].append(importance)
+                            importance = self.assign_importance_by_frequency(text, search_term, total_url_count, kw_counts[search_term]) * self.assign_importance_by_location(
+                                element_type)
+                            url_temp_scores[url] += importance
 
-            for url, importances in url_temp_scores.items():
-                url_scores[url] = sum(importances)
-
-        return url_scores, contents
+        return url_temp_scores, contents

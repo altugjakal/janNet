@@ -1,7 +1,7 @@
 from urllib.parse import urlparse
 import re
 
-
+import tldextract
 
 
 def reformat_html_tags(html_content):
@@ -19,7 +19,7 @@ def reformat_html_tags(html_content):
     h4 = re.findall(r'<h4[^>]*>(.*?)</h4>', html, re.IGNORECASE | re.DOTALL)
     h5 = re.findall(r'<h5[^>]*>(.*?)</h5>', html, re.IGNORECASE | re.DOTALL)
     h6 = re.findall(r'<h6[^>]*>(.*?)</h6>', html, re.IGNORECASE | re.DOTALL)
-    p  = re.findall(r'<p[^>]*>(.*?)</p>', html, re.IGNORECASE | re.DOTALL)
+    p = re.findall(r'<p[^>]*>(.*?)</p>', html, re.IGNORECASE | re.DOTALL)
 
     desc = re.findall(
         r'<meta[^>]*name=["\']description["\'][^>]*content=["\']([^"\']*)["\']',
@@ -52,8 +52,6 @@ def reformat_html_tags(html_content):
     texts = [[re.sub(r'<[^>]+>', '', item) for item in sublist] for sublist in texts]
     texts = [[re.sub(r'&[a-zA-Z0-9#]+;', ' ', item) for item in sublist] for sublist in texts]
     texts = [[re.sub(r'\s+', ' ', item).strip() for item in sublist] for sublist in texts]
-
-
 
     return texts
 
@@ -92,16 +90,19 @@ def html_to_clean(html):
 
     return html
 
+
 def extract_anchors(html_content):
     html_content = html_content.lower()
-    anchors = re.findall(r'href=[\'"]?([^\'" >]+)', html_content) 
+    anchors = re.findall(r'href=[\'"]?([^\'" >]+)', html_content)
 
     return anchors
+
 
 def get_domain(url):
     parsed_url = urlparse(url)
     domain = parsed_url.netloc
     return domain
+
 
 def get_tld(domain):
     parts = domain.split('.')
@@ -109,9 +110,13 @@ def get_tld(domain):
         return parts[-1]
     return ''
 
+
 def sanitize_route(url):
     if url.endswith('/'):
         return url[:-1]
     return url
 
 
+def get_url_root(url: str) -> str:
+    ext = tldextract.extract(url)
+    return f"https://{ext.domain}.{ext.suffix}"

@@ -4,7 +4,7 @@ import urllib
 
 from utils.config import Config
 from managers.db_manager import get_db, get_vdb
-from utils.regex import extract_anchors, html_to_clean
+from utils.regex import extract_anchors, html_to_clean, get_url_root
 from utils.misc import extract_words, make_request
 import urllib.robotparser as urobot
 from urllib.parse import urljoin
@@ -24,20 +24,16 @@ class Crawl():
         sleep_median = self.sleep_median
         sleep_padding = self.sleep_padding
 
-
-
+        rp = urobot.RobotFileParser()
         try:
-
-            rp = urobot.RobotFileParser()
-            rp.set_url(url + "/robots.txt")
+            r_url = get_url_root(url) + "/robots.txt"
+            rp.set_url(r_url)
             rp.read()
-            if not rp.can_fetch("*", url):
+            if not rp.can_fetch(Config.USER_AGENT, r_url):
                 self.db.drop_from_queue(url, thread_id=self.thread_id)
                 return
         except Exception as e:
-            print(f"Could not fetch robots.txt for: {url}")
-
-
+            print(f"Could not fetch robots.txt for: {r_url} {e}")
 
 
         try:
@@ -46,10 +42,6 @@ class Crawl():
             print("Crawling failed for: ", url)
             self.db.drop_from_queue(url, thread_id=self.thread_id)
             return
-
-
-
-
 
         anchors = extract_anchors(content)
 

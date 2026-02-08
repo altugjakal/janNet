@@ -52,12 +52,11 @@ class HybridSearch:
     def combined_search(self, term):
         vector_weight = self.vector_weight
         kw_weight = self.kw_weight
-        return_limit = self.return_limit
         v_search_instance = self.v_search_instance
         kw_search_instance = self.kw_search_instance
 
-        keyword_scores, keyword_content = kw_search_instance.search(term)
         vector_scores, vector_content = v_search_instance.search(term)
+        keyword_scores, keyword_content = kw_search_instance.search(term)
 
         all_contents = keyword_content | vector_content
         sorted_contents = {}

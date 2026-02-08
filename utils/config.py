@@ -4,6 +4,8 @@ class Config:
     VECTOR_WEIGHT = 0.4
     LEXICAL_WEIGHT = 0.6
 
+    USER_AGENT = "Jannetbot"
+
     EDU_TLDS = [".edu"]
     AUTHORITIVE_TLDS = [".com", ".net", ".org"]
     AUTHORITIVE_MULT = 1.0
@@ -32,14 +34,23 @@ class Config:
     }
 
     SEED_URLS = [
-        ["https://www.cs.stanford.edu/people-cs"],
-        ["https://www.cs.stanford.edu/"],
-        ["https://onlinesourcerer.org/"],
-        ["https://cs.princeton.edu/"],
-        ["https://www.cs.cmu.edu/"]
+
+            ["https://www.cs.stanford.edu/people-cs"],
+            ["https://www.cs.stanford.edu/"],
+            ["https://onlinesourcerer.org/"],
+            ["https://cs.princeton.edu/"],
+            ["https://www.cs.cmu.edu/"],
+            ["https://www.cs.berkeley.edu/"],
+            ["https://cs.mit.edu/"],
+            ["https://www.cs.ox.ac.uk/"],
+            ["https://www.cl.cam.ac.uk/"],
+            ["https://www.cs.columbia.edu/"],
+            ["https://www.cs.utoronto.ca/"]
+
+
     ]
 
     DESIGN_FILE_EXTS = (".png", ".jpg", ".jpeg", ".ico", ".webp", ".svg", ".css", ".docx")
-    THREAD_COUNT = 5
+    THREAD_COUNT = 11
 
     assert len(SEED_URLS) == THREAD_COUNT
