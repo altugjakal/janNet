@@ -1,6 +1,5 @@
 
 # janNet
-## Just Another Neural Network for Efficient Text
 
 A hybrid search engine combining traditional keyword matching with neural vector search for high-quality document retrieval.
 
