@@ -14,13 +14,15 @@ app.register_blueprint(markup_bp, url_prefix='/')
 
 host = '0.0.0.0'
 port = 5004
+_vdb = get_vdb()
 
 
 def main(thread_id):
+    global _vdb
     db = get_db()
-    vdb = get_vdb()
 
-    crawler = Crawl(sleep_median=0.400, sleep_padding=0.200, db=db, vdb=vdb, thread_id=thread_id)
+
+    crawler = Crawl(sleep_median=0.400, sleep_padding=0.200, db=db, vdb=_vdb, thread_id=thread_id)
 
     #problem here
 
@@ -47,7 +49,7 @@ def main(thread_id):
 
         crawl_count += 1
 
-    vdb.save_to_disk()
+    _vdb.save_to_disk()
 
 
 if __name__ == "__main__":

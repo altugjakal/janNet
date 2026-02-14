@@ -1,10 +1,11 @@
 import random
 import time
 import urllib
+from collections import defaultdict
 
 from utils.config import Config
 from managers.db_manager import get_db, get_vdb
-from utils.regex import extract_anchors, html_to_clean, get_url_root
+from utils.parsing import extract_anchors, html_to_clean, get_url_root, reformat_html_tags
 from utils.misc import extract_words, make_request
 import urllib.robotparser as urobot
 from urllib.parse import urljoin
@@ -18,6 +19,10 @@ class Crawl():
         self.db = db
         self.vdb = vdb
         self.thread_id = thread_id
+
+    def assign_importance_by_location(self, element_type):
+        base_importance = Config.HTML_IMPORTANCE_MAP.get(element_type, 1)
+        return base_importance
 
     def crawl(self, url):
 
@@ -35,23 +40,32 @@ class Crawl():
         except Exception as e:
             print(f"Could not fetch robots.txt for: {r_url} {e}")
 
-
         try:
             content = make_request(url).text
+            print(f"200: {url}")
         except Exception as e:
             print("Crawling failed for: ", url)
             self.db.drop_from_queue(url, thread_id=self.thread_id)
             return
 
-        anchors = extract_anchors(content)
+        anchors, anchor_values = extract_anchors(content)
 
         # Discover and queue new URLs
         new_count = 0
-        for anchor in anchors:
+        for anchor, a_v in anchors, anchor_values:
             absolute_url = urljoin(url, anchor)
             absolute_url = absolute_url.rstrip("/")
             absolute_url = absolute_url.split("#")[0]
 
+            pairs = []
+            for value in extract_words(a_v):
+                pairs.append((value, Config.HTML_IMPORTANCE_MAP.get("p")))
+
+            self.db.manage_for_index(url=absolute_url,pairs=pairs )
+
+
+
+            #add items to index from anchor text value
 
             if self.db.is_url_visited(absolute_url):
                 continue
@@ -62,20 +76,43 @@ class Crawl():
             if absolute_url.endswith(Config.DESIGN_FILE_EXTS):
                 continue
 
-            if not self.db.is_url_visited(absolute_url) and not self.db.is_in_queue(absolute_url, thread_id=self.thread_id):
+            if not self.db.is_url_visited(absolute_url) and not self.db.is_in_queue(absolute_url,
+                                                                                    thread_id=self.thread_id):
                 self.db.add_to_queue(absolute_url, thread_id=self.thread_id)
                 new_count += 1
-
-
 
         if new_count > 0:
             print(f"  → Queued {new_count} new URLs")
 
-
         self.db.drop_from_queue(url, thread_id=self.thread_id)
         self.db.add_url(url, content)
 
-        #add overlap logic
+        page_contents = reformat_html_tags(content)
+
+        text_list = [
+            (page_contents.title, "title"),
+            (page_contents.headings[0], "h1"),
+            (page_contents.headings[1], "h2"),
+            (page_contents.headings[2], "h3"),
+            (page_contents.headings[3], "h4"),
+            (page_contents.headings[4], "h5"),
+            (page_contents.headings[5], "h6"),
+            (page_contents.paragraphs, "p"),
+
+            (page_contents.description, "description")
+        ]
+
+        keyword_pairs = defaultdict(float)
+
+        for text_items, element_type in text_list:
+            importance = self.assign_importance_by_location(element_type)
+
+            for text in text_items:
+                words = extract_words(text)  # Get list of words
+                for word in words:
+                    keyword_pairs[word] += importance
+
+        # add overlap logic + passage ranking
         clean_content = html_to_clean(content)
         words = clean_content.split()
         for i in range(0, len(words), 400):
@@ -84,7 +121,6 @@ class Crawl():
             self.vdb.insert(text=chunk, id=chunk_id)
             self.db.manage_vector_for_index(url=url, emb_id=chunk_id)
 
-        self.db.manage_for_index(url=url, keywords=extract_words(content))
+        self.db.manage_for_index(url=url, pairs=keyword_pairs)
 
-        print(f"200: {url}")
         time.sleep(sleep_median + random.uniform(-sleep_padding, sleep_padding))

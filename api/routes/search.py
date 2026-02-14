@@ -1,6 +1,6 @@
 from managers.db_manager import get_vdb, get_db
 from core.hybrid import HybridSearch
-from utils.regex import get_domain, html_to_clean
+from utils.parsing import get_domain, html_to_clean
 from flask import jsonify, Blueprint
 from utils.misc import site_details
 

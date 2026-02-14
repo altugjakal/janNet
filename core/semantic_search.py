@@ -1,4 +1,4 @@
-
+from utils.parsing import html_to_clean
 
 
 class SemanticSearch():
@@ -10,7 +10,6 @@ class SemanticSearch():
 
         term_vector = self.vdb.vectorise_text(term)
         vectors = self.vdb.euclidian_d(term_vector)
-
 
         url_scores = {}
         url_contents = {}

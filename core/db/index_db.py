@@ -27,7 +27,8 @@ class IndexDB:
             c.execute('''CREATE TABLE IF NOT EXISTS keyword_index
                          (keyword TEXT,
                           url TEXT,
-                          PRIMARY KEY (keyword, url))''')
+                          score INTEGER NOT NULL default 0,
+                          PRIMARY KEY (keyword))''')
 
             c.execute('''CREATE TABLE IF NOT EXISTS vector_index (
                 id,
@@ -171,25 +172,25 @@ class IndexDB:
             return result
 
     @locked
-    def manage_for_index(self, url, keywords):
+    def manage_for_index(self, url, pairs):
         with self.open_db() as conn:
             c = conn.cursor()
 
             c.executemany(
-                    '''INSERT OR IGNORE INTO keyword_index (url, keyword) VALUES (?, ?)''',
-                    [(url, keyword) for keyword in keywords]
+                    '''INSERT OR IGNORE INTO keyword_index (url, keyword, score) VALUES (?, ?, ?)''',
+                    [(url, keyword, score) for keyword, score in pairs.items()]
                 )
 
             conn.commit()
 
     @locked
-    def search_index(self, keywords):
+    def search_index(self, keywords, limit):
         with self.open_db() as conn:
             c = conn.cursor()
             results = []
 
             for keyword in keywords:
-                c.execute('''SELECT keyword_index.url, keyword_index.keyword, urls.content FROM keyword_index LEFT JOIN urls ON urls.url = keyword_index.url WHERE keyword = ?''', (keyword,))
+                c.execute('''SELECT keyword_index.url, keyword_index.keyword, urls.content, keyword_index.score FROM keyword_index LEFT JOIN urls ON urls.url = keyword_index.url WHERE keyword = ? ORDER BY keyword_index.score LIMIT ?''', (keyword, limit))
                 results += c.fetchall()
 
             return results

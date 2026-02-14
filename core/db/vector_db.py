@@ -18,7 +18,6 @@ class VectorDB:
 # handle multiple passages here, id is not the unique identifier here
     @locked
     def insert(self, text, id):
-
         vector = self.vectorise_text(text)
 
         vector = np.array([vector]).astype('float32')
@@ -26,6 +25,7 @@ class VectorDB:
         try:
 
             self.index.add_with_ids(vector, id)
+
         except Exception as e:
             print(e)
 
@@ -79,4 +79,3 @@ class VectorDB:
 
     def save_to_disk(self):
         faiss.write_index(self.index, "db/index.index")
-

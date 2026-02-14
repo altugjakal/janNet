@@ -5,7 +5,7 @@ from core.lexical_search import LexicalSearch
 from core.semantic_search import SemanticSearch
 from utils.config import Config
 from core.maxsim import MaxSim
-from utils.regex import html_to_clean, get_tld, get_domain
+from utils.parsing import html_to_clean, get_tld, get_domain
 
 
 class HybridSearch:
@@ -22,20 +22,8 @@ class HybridSearch:
         self.kw_search_instance = LexicalSearch(self.db)
         self.maxsim_instance = MaxSim()
 
-    def get_url_rank(self, url, importance):
-        url_obj = urllib.parse.urlparse(url)
+    def get_tld_rank(self, url, importance):
 
-        paths = [p for p in url_obj.path.split('/') if p]
-        subdomains = url_obj.netloc.split('.')[:-2]
-        params = url_obj.query.split('&') if url_obj.query else []
-
-        path_depth = len(paths)
-        param_count = len(params)
-        subdomain_count = len(subdomains)
-
-        total_depth = path_depth + param_count + subdomain_count
-
-        path_length_penalty = 1 / (1 + max(0, total_depth - 3) * 0.1)
 
         domain = get_domain(url)
         tld = get_tld(domain)
@@ -46,7 +34,7 @@ class HybridSearch:
         else:
             tld_multiplier = Config.GENERIC_MULT
 
-        base_score = importance * path_length_penalty * tld_multiplier
+        base_score = importance * tld_multiplier
         return base_score
 
     def combined_search(self, term):
@@ -105,13 +93,12 @@ class HybridSearch:
 
         final_sorted_urls = sorted(
             maxsim_scores.items(),
-            key=lambda x: self.get_url_rank(x[0], x[1]),
+            key=lambda x: self.get_tld_rank(x[0], x[1]),
             reverse=True
         )
 
         for url, score in final_sorted_urls:
             final_sorted_contents[url] = all_contents[url]
-
 
         print(f"\nHybrid search for '{term}' (KW: {kw_weight}, Vec: {vector_weight})")
         print(f"Found: {len(keyword_scores)} keyword, {len(vector_scores)} vector, {len(all_urls)} total")
