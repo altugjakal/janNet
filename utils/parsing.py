@@ -4,7 +4,6 @@ from urllib.parse import urlparse
 import re
 from lxml import html
 import tldextract
-from markdown_it.rules_block import paragraph
 
 
 @dataclass

@@ -1,5 +1,6 @@
 import random
 import time
+import traceback
 import urllib
 from collections import defaultdict
 
@@ -48,79 +49,84 @@ class Crawl():
             self.db.drop_from_queue(url, thread_id=self.thread_id)
             return
 
-        anchors, anchor_values = extract_anchors(content)
+        try:
 
-        # Discover and queue new URLs
-        new_count = 0
-        for anchor, a_v in anchors, anchor_values:
-            absolute_url = urljoin(url, anchor)
-            absolute_url = absolute_url.rstrip("/")
-            absolute_url = absolute_url.split("#")[0]
+            anchors, anchor_values = extract_anchors(content)
 
-            pairs = []
-            for value in extract_words(a_v):
-                pairs.append((value, Config.HTML_IMPORTANCE_MAP.get("p")))
+            # Discover and queue new URLs
+            new_count = 0
+            for anchor in anchors:
+                for a_v in anchor_values:
+                    absolute_url = urljoin(url, anchor)
+                    absolute_url = absolute_url.rstrip("/")
+                    absolute_url = absolute_url.split("#")[0]
 
-            self.db.manage_for_index(url=absolute_url,pairs=pairs )
+                    pairs = {}
+                    for value in extract_words(a_v):
+                        pairs[value] = Config.HTML_IMPORTANCE_MAP.get("p")
+
+                    self.db.manage_for_index(url=absolute_url,pairs=pairs )
 
 
 
-            #add items to index from anchor text value
+                    #add items to index from anchor text value
 
-            if self.db.is_url_visited(absolute_url):
-                continue
+                    if self.db.is_url_visited(absolute_url):
+                        continue
 
-            if not absolute_url.startswith(("http://", "https://")):
-                continue
+                    if not absolute_url.startswith(("http://", "https://")):
+                        continue
 
-            if absolute_url.endswith(Config.DESIGN_FILE_EXTS):
-                continue
+                    if absolute_url.endswith(Config.DESIGN_FILE_EXTS):
+                        continue
 
-            if not self.db.is_url_visited(absolute_url) and not self.db.is_in_queue(absolute_url,
-                                                                                    thread_id=self.thread_id):
-                self.db.add_to_queue(absolute_url, thread_id=self.thread_id)
-                new_count += 1
+                    if not self.db.is_url_visited(absolute_url) and not self.db.is_in_queue(absolute_url,
+                                                                                            thread_id=self.thread_id):
+                        self.db.add_to_queue(absolute_url, thread_id=self.thread_id)
+                        new_count += 1
 
-        if new_count > 0:
-            print(f"  → Queued {new_count} new URLs")
+            if new_count > 0:
+                print(f"  → Queued {new_count} new URLs")
 
-        self.db.drop_from_queue(url, thread_id=self.thread_id)
-        self.db.add_url(url, content)
+            self.db.drop_from_queue(url, thread_id=self.thread_id)
+            self.db.add_url(url, content)
 
-        page_contents = reformat_html_tags(content)
+            page_contents = reformat_html_tags(content)
 
-        text_list = [
-            (page_contents.title, "title"),
-            (page_contents.headings[0], "h1"),
-            (page_contents.headings[1], "h2"),
-            (page_contents.headings[2], "h3"),
-            (page_contents.headings[3], "h4"),
-            (page_contents.headings[4], "h5"),
-            (page_contents.headings[5], "h6"),
-            (page_contents.paragraphs, "p"),
+            text_list = [
+                (page_contents.title, "title"),
+                (page_contents.headings[0], "h1"),
+                (page_contents.headings[1], "h2"),
+                (page_contents.headings[2], "h3"),
+                (page_contents.headings[3], "h4"),
+                (page_contents.headings[4], "h5"),
+                (page_contents.headings[5], "h6"),
+                (page_contents.paragraphs, "p"),
 
-            (page_contents.description, "description")
-        ]
+                (page_contents.description, "description")
+            ]
 
-        keyword_pairs = defaultdict(float)
+            keyword_pairs = defaultdict(float)
 
-        for text_items, element_type in text_list:
-            importance = self.assign_importance_by_location(element_type)
+            for text_items, element_type in text_list:
+                importance = self.assign_importance_by_location(element_type)
 
-            for text in text_items:
-                words = extract_words(text)  # Get list of words
-                for word in words:
-                    keyword_pairs[word] += importance
+                for text in text_items:
+                    words = extract_words(text)  # Get list of words
+                    for word in words:
+                        keyword_pairs[word] += importance
 
-        # add overlap logic + passage ranking
-        clean_content = html_to_clean(content)
-        words = clean_content.split()
-        for i in range(0, len(words), 400):
-            chunk = ' '.join(words[i:i + 400])
-            chunk_id = hash((url, i)) % (10 ** 9)
-            self.vdb.insert(text=chunk, id=chunk_id)
-            self.db.manage_vector_for_index(url=url, emb_id=chunk_id)
+            # add overlap logic + passage ranking
+            clean_content = html_to_clean(content)
+            words = clean_content.split()
+            for i in range(0, len(words), 400):
+                chunk = ' '.join(words[i:i + 400])
+                chunk_id = hash((url, i)) % (10 ** 9)
+                self.vdb.insert(text=chunk, id=chunk_id)
+                self.db.manage_vector_for_index(url=url, emb_id=chunk_id)
 
-        self.db.manage_for_index(url=url, pairs=keyword_pairs)
+            self.db.manage_for_index(url=url, pairs=keyword_pairs)
 
-        time.sleep(sleep_median + random.uniform(-sleep_padding, sleep_padding))
+            time.sleep(sleep_median + random.uniform(-sleep_padding, sleep_padding))
+        except Exception as e:
+            traceback.print_exception(e)
