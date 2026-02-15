@@ -21,15 +21,12 @@ def main(thread_id):
     global _vdb
     db = get_db()
 
-
     crawler = Crawl(sleep_median=0.400, sleep_padding=0.200, db=db, vdb=_vdb, thread_id=thread_id)
 
     #problem here
 
     if db.get_queue_size(thread_id=thread_id) == 0:
-
         db.add_to_queue_batch(Config.SEED_URLS[thread_id], thread_id)
-
 
     crawl_count = 0
 
@@ -43,9 +40,7 @@ def main(thread_id):
 
         url = queue[0][0]
 
-
         crawler.crawl(url)
-
 
         crawl_count += 1
 
@@ -53,12 +48,21 @@ def main(thread_id):
 
 
 if __name__ == "__main__":
+    import argparse
+
+    parser = argparse.ArgumentParser()
+    parser.add_argument('-n', '--nogui', action='store_true', help='Disable Web UI')
+
+    args = parser.parse_args()
+
     with ThreadPoolExecutor(max_workers=Config.THREAD_COUNT) as exe:
         for t_id in range(Config.THREAD_COUNT):
             exe.submit(main, t_id)
 
-        try:
-            app.run(host=host, port=port, debug=False)
-        finally:
-            print("Shutting down crawlers...")
-            exe.shutdown(wait=True)
+        if not args.nogui:
+
+            try:
+                app.run(host=host, port=port, debug=False)
+            finally:
+                print("Shutting down crawlers...")
+                exe.shutdown(wait=True)
