@@ -72,6 +72,7 @@ def reformat_html_tags(html_content):
 
 def html_to_clean(html):
     # Remove comments first
+
     html = re.sub(r'<!--.*?-->', '', html, flags=re.DOTALL)
 
     # Remove script and style tags (these are most important)

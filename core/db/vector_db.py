@@ -9,6 +9,13 @@ from utils.config import Config
 class VectorDB:
     def __init__(self, dimension=Config.MODEL_OUTPUT_DIM):
 
+        if torch.cuda.is_available():
+            self.device = torch.device("cuda")
+        elif torch.backends.mps.is_available():
+            self.device = torch.device("mps")
+        else:
+            self.device = torch.device("cpu")
+
         try:
             self.index = faiss.read_index("db/index.index")
         except (FileNotFoundError, RuntimeError):
@@ -67,7 +74,7 @@ class VectorDB:
             padding=True,
             truncation=True,
             return_tensors='pt'
-        ).to("mps")
+        ).to(self.device)
 
         with torch.no_grad():
             output = model[0].auto_model(**encoded)

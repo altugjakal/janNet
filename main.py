@@ -28,20 +28,22 @@ def main(thread_id):
     if db.get_queue_size(thread_id=thread_id) == 0:
         db.add_to_queue_batch(Config.SEED_URLS[thread_id], thread_id)
 
+
+
     crawl_count = 0
 
     while crawl_count < Config.MAX_CRAWLS:
 
+
         queue = db.get_queue_batch(thread_id=thread_id)
 
-        if not queue:
+        if len(queue) == 0:
             print("Queue empty!")
             break
 
         url = queue[0][0]
 
         crawler.crawl(url)
-
         crawl_count += 1
 
     _vdb.save_to_disk()
@@ -62,7 +64,7 @@ if __name__ == "__main__":
         if not args.nogui:
 
             try:
-                app.run(host=host, port=port, debug=False)
+                app.run(host=host, port=port, debug=False, use_reloader=False)
             finally:
                 print("Shutting down crawlers...")
                 exe.shutdown(wait=True)

@@ -38,11 +38,12 @@ class LexicalSearch:
         kw_counts = {}
 
         locations = self.db.search_index(terms, limit=Config.LEXICAL_POOL_SIZE)
+
         for term in terms:
             kw_counts[term] = self.db.get_total_kw_count(term.lower())
 
         for url, keyword, content, score in locations:
-            if url not in contents:
+            if url not in contents and content:
                 contents[url] = content
                 for search_term in terms:
                     importance = self.assign_importance_by_frequency(html_to_clean(content), search_term, total_url_count, score)

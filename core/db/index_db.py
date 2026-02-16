@@ -84,6 +84,7 @@ class IndexDB:
             )
             conn.commit()
 
+
     @locked
     def get_total_kw_count(self, keyword):
         with self.open_db() as conn:
