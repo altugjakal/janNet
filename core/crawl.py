@@ -3,6 +3,7 @@ import time
 import traceback
 import urllib
 from collections import defaultdict
+from math import log1p
 
 from protego import Protego
 
@@ -53,6 +54,7 @@ class Crawl():
 
 
         anchors, anchor_values = extract_anchors(content)
+
 
         # Discover and queue new URLs
         new_count = 0
@@ -108,6 +110,7 @@ class Crawl():
         ]
 
         keyword_pairs = defaultdict(float)
+        clean_content = html_to_clean(content)
 
         for text_items, element_type in text_list:
             importance = self.assign_importance_by_location(element_type)
@@ -115,10 +118,13 @@ class Crawl():
             for text in text_items:
                 words = extract_words(text)  # Get list of words
                 for word in words:
-                    keyword_pairs[word] += importance
+                    tf = text.lower().count(clean_content.lower())
+                    tf = 1 + log1p(tf)
+                    tf_capped = min(tf, 3)
+                    keyword_pairs[word] += importance * tf_capped
 
         # add overlap logic + passage ranking
-        clean_content = html_to_clean(content)
+
         words = clean_content.split()
         for i in range(0, len(words), 400):
             chunk = ' '.join(words[i:i + 400])
