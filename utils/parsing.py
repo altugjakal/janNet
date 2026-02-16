@@ -13,10 +13,11 @@ class PageElements:
     paragraphs: []
     description: []
 
-def reformat_html_tags(html_content):
-    tree = html.fromstring(html_content.lower())
 
-    for bad in tree.xpath("//script | //style"):
+def reformat_html_tags(html_content):
+    tree = html.fromstring(html_content)
+
+    for bad in tree.xpath("//script | //style | //noscript | //nav | //footer | //header"):
         bad.getparent().remove(bad)
 
     title = []
@@ -26,46 +27,69 @@ def reformat_html_tags(html_content):
     if t:
         title.append(t.strip())
 
-    # og:title
-    title += tree.xpath("//meta[@property='og:title']/@content")
+    # og:title (case-insensitive)
+    title += tree.xpath("//meta[translate(@property,'ABCDEFGHIJKLMNOPQRSTUVWXYZ','abcdefghijklmnopqrstuvwxyz')='og:title']/@content")
 
     # twitter:title
-    title += tree.xpath("//meta[@name='twitter:title']/@content")
+    title += tree.xpath("//meta[translate(@name,'ABCDEFGHIJKLMNOPQRSTUVWXYZ','abcdefghijklmnopqrstuvwxyz')='twitter:title']/@content")
 
     headings = []
     for level in range(1, 7):
-        headings.append(
-            tree.xpath("//h" + str(level))
-        )
-
-    # --- PARAGRAPHS ---
-    p = tree.xpath(
-        "//p | //span | //li | //td | //th | //dd | //dt | //blockquote | //figcaption | //label | //a | //pre | //code")
+        tags = tree.xpath(f"//h{level} | //H{level}")
+        headings.append([
+            " ".join(el.text_content().split())
+            for el in tags
+            if el.text_content().strip()
+        ])
 
     # --- DESCRIPTION ---
-    desc = (
-            tree.xpath("//meta[@name='description']/@content") or
-            tree.xpath("//meta[@property='og:description']/@content") or
-            tree.xpath("//meta[@name='twitter:description']/@content")
-    )
+    desc_xpath = [
+        "//meta[translate(@name,'ABCDEFGHIJKLMNOPQRSTUVWXYZ','abcdefghijklmnopqrstuvwxyz')='description']/@content",
+        "//meta[translate(@property,'ABCDEFGHIJKLMNOPQRSTUVWXYZ','abcdefghijklmnopqrstuvwxyz')='og:description']/@content",
+        "//meta[translate(@name,'ABCDEFGHIJKLMNOPQRSTUVWXYZ','abcdefghijklmnopqrstuvwxyz')='twitter:description']/@content",
+    ]
+    desc = []
+    for xp in desc_xpath:
+        result = tree.xpath(xp)
+        if result:
+            desc = [" ".join(result[0].split())]
+            break
 
-    def clean_list(lst):
-        result = []
-        for item in lst:
-            if not item:
+    # --- PARAGRAPHS: extract all visible text from body ---
+    body = tree.xpath("//body")
+    paragraphs = []
+    seen = set()
+
+    if body:
+        for element in body[0].iter():
+            # Skip non-content tags
+            if element.tag in ('script', 'style', 'noscript', 'meta', 'link', 'br', 'hr', 'img'):
                 continue
-            t = item.text_content() if hasattr(item, 'text_content') else str(item)
-            t = " ".join(t.split())
-            if t:
-                result.append(t)
-        return result
 
-    title = clean_list(title)
-    headings = [clean_list(h) for h in headings]
-    p = clean_list(p)
-    desc = clean_list(desc[:1])
+            # Get direct text of this element (not children's text)
+            texts = []
+            if element.text and element.text.strip():
+                texts.append(element.text.strip())
+            for child in element:
+                if child.tail and child.tail.strip():
+                    texts.append(child.tail.strip())
 
-    page_elements = PageElements(title=title, headings=headings, description=desc, paragraphs=p)
+            if not texts:
+                continue
+
+            text = " ".join(" ".join(texts).split())
+            if len(text) < 5:
+                continue
+
+            # Deduplicate
+            if text not in seen:
+                seen.add(text)
+                paragraphs.append(text)
+
+    # Clean title
+    title = [" ".join(t.split()) for t in title if t and t.strip()]
+
+    page_elements = PageElements(title=title, headings=headings, description=desc, paragraphs=paragraphs)
 
     return page_elements
 
