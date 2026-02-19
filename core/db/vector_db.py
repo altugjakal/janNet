@@ -17,7 +17,7 @@ class VectorDB:
             self.device = torch.device("cpu")
 
         try:
-            self.index = faiss.read_index("db/index.index")
+            self.index = faiss.read_index("index/index.index")
         except (FileNotFoundError, RuntimeError):
             self.base_index = faiss.IndexFlatL2(dimension)
             self.index = faiss.IndexIDMap2(self.base_index)
@@ -85,4 +85,4 @@ class VectorDB:
         return token_embeddings
 
     def save_to_disk(self):
-        faiss.write_index(self.index, "db/index.index")
+        faiss.write_index(self.index, "index/index.index")

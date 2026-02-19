@@ -1,54 +1,66 @@
-import sqlite3
+import mysql.connector
 from contextlib import contextmanager
 from core.db.thread_lock_wrapper import locked
 
+
 class IndexDB:
-    def __init__(self):
+    def __init__(self, host, user, password, database):
+        self.config = {
+            'host': host,
+            'user': user,
+            'password': password,
+            'database': database
+        }
         with self.open_db() as conn:
             c = conn.cursor()
 
             c.execute('''CREATE TABLE IF NOT EXISTS urls
-                         (url TEXT PRIMARY KEY,
-                         content TEXT NOT NULL,
-                          crawled_at TIMESTAMP NOT NULL default CURRENT_TIMESTAMP)''')
+                         (url VARCHAR(2048),
+                        url_hash CHAR(64) AS (SHA2(url, 256)) STORED PRIMARY KEY,
+                         content LONGTEXT NOT NULL,
+                          crawled_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP)''')
 
-            # Queue table
             c.execute('''CREATE TABLE IF NOT EXISTS queue
-                         (url TEXT PRIMARY KEY,
+            
+                         (url VARCHAR(2048),
+                         url_hash CHAR(64) AS (SHA2(url, 256)) STORED PRIMARY KEY,
                          issuer_thread_id INTEGER NOT NULL,
-                          added_at TIMESTAMP NOT NULL default CURRENT_TIMESTAMP)''')
+                          added_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP)''')
 
-            # Domains table
             c.execute('''CREATE TABLE IF NOT EXISTS domains
-                         (domain TEXT PRIMARY KEY,
-                          added_at TIMESTAMP NOT NULL default CURRENT_TIMESTAMP)''')
+                         (domain VARCHAR(512) PRIMARY KEY,
+                          added_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP)''')
 
-            # Keyword index table
             c.execute('''CREATE TABLE IF NOT EXISTS keyword_index
-                         (keyword TEXT,
-                          url TEXT,
-                          score INTEGER NOT NULL default 0,
-                          PRIMARY KEY (keyword, url))''')
+                         (keyword VARCHAR(512),
+                          url VARCHAR(2048),
+                          url_hash CHAR(64) AS (SHA2(url, 256)) STORED,
+                          score INTEGER NOT NULL DEFAULT 0,
+                          PRIMARY KEY (keyword, url_hash))''')
 
             c.execute('''CREATE TABLE IF NOT EXISTS vector_index (
-                id,
+                id INTEGER AUTO_INCREMENT PRIMARY KEY,
                 embedding_id INTEGER NOT NULL,
-                url TEXT,
-                created_at TEXT NOT NULL default CURRENT_TIMESTAMP,
-                PRIMARY KEY (id))''')
+                url VARCHAR(2048),
+                url_hash CHAR(64) AS (SHA2(url, 256)) STORED,
+                created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP)''')
 
-            # Create indexes for fast lookups
-            c.execute('CREATE INDEX IF NOT EXISTS idx_keyword ON keyword_index(keyword)')
-            c.execute('CREATE INDEX IF NOT EXISTS idx_url ON keyword_index(url)')
+            try:
+                c.execute('CREATE INDEX idx_keyword ON keyword_index(keyword)')
+            except mysql.connector.errors.DatabaseError:
+                pass
+            try:
+                c.execute('CREATE INDEX idx_url_hash ON keyword_index(url_hash)')
+            except mysql.connector.errors.DatabaseError:
+                pass
+
 
             conn.commit()
 
     @contextmanager
-    def open_db(self, db_path="db/general.db"):
-
-        conn = sqlite3.connect(db_path)
+    def open_db(self):
+        conn = mysql.connector.connect(**self.config)
         try:
-
             yield conn
         finally:
             conn.close()
@@ -57,21 +69,21 @@ class IndexDB:
     def add_url(self, url, content):
         with self.open_db() as conn:
             c = conn.cursor()
-            c.execute('''INSERT OR IGNORE INTO urls (url, content) VALUES (?, ?)''', (url, content))
+            c.execute('''INSERT IGNORE INTO urls (url, content) VALUES (%s, %s)''', (url, content))
             conn.commit()
 
     @locked
     def is_url_visited(self, url):
         with self.open_db() as conn:
             c = conn.cursor()
-            c.execute('''SELECT url FROM urls WHERE url = ?''', (url,))
+            c.execute('''SELECT url FROM urls url_hash = SHA2(%s, 256)''', (url,))
             return c.fetchone() is not None
 
     @locked
     def add_to_queue(self, url, thread_id):
         with self.open_db() as conn:
             c = conn.cursor()
-            c.execute('''INSERT OR IGNORE INTO queue (url, issuer_thread_id) VALUES (?, ?)''', (url, thread_id))
+            c.execute('''INSERT IGNORE INTO queue (url, issuer_thread_id) VALUES (%s, %s)''', (url, thread_id))
             conn.commit()
 
     @locked
@@ -79,19 +91,17 @@ class IndexDB:
         with self.open_db() as conn:
             c = conn.cursor()
             c.executemany(
-                '''INSERT OR IGNORE INTO queue (url, issuer_thread_id) VALUES (?, ?)''',
+                '''INSERT IGNORE INTO queue (url, issuer_thread_id) VALUES (%s, %s)''',
                 [(url, thread_id) for url in urls]
             )
             conn.commit()
-
 
     @locked
     def get_total_kw_count(self, keyword):
         with self.open_db() as conn:
             c = conn.cursor()
-            c.execute('''SELECT COUNT(*) FROM keyword_index WHERE keyword = ?''', (keyword,))
+            c.execute('''SELECT COUNT(*) FROM keyword_index WHERE keyword = %s''', (keyword,))
             return c.fetchone()[0]
-
 
     @locked
     def get_total_url_count(self):
@@ -100,50 +110,47 @@ class IndexDB:
             c.execute('''SELECT COUNT(*) FROM urls''')
             return c.fetchone()[0]
 
-
     @locked
     def get_queue_size(self, thread_id):
-        """Get current queue size"""
         with self.open_db() as conn:
             c = conn.cursor()
-            c.execute('''SELECT COUNT(*) FROM queue WHERE issuer_thread_id = ? ''', (thread_id,))
+            c.execute('''SELECT COUNT(*) FROM queue WHERE issuer_thread_id = %s''', (thread_id,))
             return c.fetchone()[0]
 
     @locked
     def drop_from_queue(self, url, thread_id):
         with self.open_db() as conn:
             c = conn.cursor()
-            c.execute('''DELETE FROM queue WHERE url = ? AND issuer_thread_id = ?''', (url, thread_id))
+            c.execute('''DELETE FROM queue url_hash = SHA2(%s, 256) AND issuer_thread_id = %s''', (url, thread_id))
             conn.commit()
 
     @locked
     def is_in_queue(self, url, thread_id):
         with self.open_db() as conn:
             c = conn.cursor()
-            c.execute('''SELECT url FROM queue WHERE url = ? AND issuer_thread_id = ?''', (url, thread_id))
-            return len(c.fetchall()) > 0
+            c.execute('''SELECT url FROM queue url_hash = SHA2(%s, 256) AND issuer_thread_id = %s''', (url, thread_id))
+            return c.fetchone() is not None
 
     @locked
     def get_queue_batch(self, thread_id, limit=1000):
         with self.open_db() as conn:
             c = conn.cursor()
-            c.execute('''SELECT url FROM queue WHERE issuer_thread_id = ? ORDER BY added_at ASC LIMIT ?''',
+            c.execute('''SELECT url FROM queue WHERE issuer_thread_id = %s ORDER BY added_at ASC LIMIT %s''',
                       (thread_id, limit))
-
             return c.fetchall()
 
     @locked
     def add_domain(self, domain):
         with self.open_db() as conn:
             c = conn.cursor()
-            c.execute('''INSERT OR IGNORE INTO domains (domain) VALUES (?, ?)''', (domain))
+            c.execute('''INSERT IGNORE INTO domains (domain) VALUES (%s)''', (domain,))
             conn.commit()
 
     @locked
     def check_domain(self, domain):
         with self.open_db() as conn:
             c = conn.cursor()
-            c.execute('''SELECT domain FROM domains WHERE domain = ?''', (domain,))
+            c.execute('''SELECT domain FROM domains WHERE domain = %s''', (domain,))
             return c.fetchone() is not None
 
     @locked
@@ -157,55 +164,45 @@ class IndexDB:
     def manage_vector_for_index(self, url, emb_id):
         with self.open_db() as conn:
             c = conn.cursor()
-            c.execute('''INSERT INTO vector_index (embedding_id,
-                    url) VALUES (?, ?)''', (emb_id, url))
+            c.execute('''INSERT INTO vector_index (embedding_id, url) VALUES (%s, %s)''', (emb_id, url))
             conn.commit()
 
     @locked
     def get_url_by_vector_id(self, vector_id):
         with self.open_db() as conn:
             c = conn.cursor()
-            c.execute('''SELECT vector_index.url, urls.content FROM vector_index LEFT JOIN urls ON vector_index.url = 
-            urls.url WHERE embedding_id = ?''', (vector_id,))
-            result = c.fetchone()
-
-
-            return result
+            c.execute('''SELECT vector_index.url, urls.content FROM vector_index 
+                         LEFT JOIN urls ON vector_index.url_hash = urls.url_hash
+                         WHERE embedding_id = %s''', (vector_id,))
+            return c.fetchone()
 
     @locked
     def manage_for_index(self, url, pairs):
         with self.open_db() as conn:
             c = conn.cursor()
-
             c.executemany(
-                    '''INSERT INTO keyword_index (url, keyword, score) VALUES (?, ?, ?)
-ON CONFLICT (keyword, url) DO UPDATE SET score = score + excluded.score''',
-                    [(url, keyword, score) for keyword, score in pairs.items()]
-                )
-
+                '''INSERT INTO keyword_index (url, keyword, score) VALUES (%s, %s, %s)
+                   ON DUPLICATE KEY UPDATE score = score + VALUES(score)''',
+                [(url, keyword, score) for keyword, score in pairs.items()]
+            )
             conn.commit()
 
     @locked
     def search_index(self, keywords, limit):
         with self.open_db() as conn:
             c = conn.cursor()
-            placeholders = ','.join('?' * len(keywords))
+            placeholders = ','.join(['%s'] * len(keywords))
             query = f''' SELECT keyword_index.url, keyword_index.keyword, urls.content, keyword_index.score
-        FROM keyword_index
-        LEFT JOIN urls ON urls.url = keyword_index.url
-        WHERE keyword_index.keyword IN ({placeholders})
-            '''
-
-            c.execute(query, (*keywords,))
-            result =  c.fetchall()
-            return result
+                    FROM keyword_index
+                    LEFT JOIN urls ON urls.url_hash = keyword_index.url_hash
+                    WHERE keyword_index.keyword IN ({placeholders})
+                        '''
+            c.execute(query, (*keywords, limit))
+            return c.fetchall()
 
     @locked
     def get_content_by_url(self, url, limit):
         with self.open_db() as conn:
             c = conn.cursor()
-            c.execute('''SELECT content FROM urls WHERE url = ? LIMIT ?''', (url, limit))
-            result = c.fetchone()
-
-            return result
-
+            c.execute('''SELECT content FROM urls WHERE url = %s LIMIT %s''', (url, limit))
+            return c.fetchone()

@@ -17,6 +17,11 @@ class Config:
 
     FIRST_POOL_SIZE = 10
 
+    DB_PASSWORD = '1601'
+    DB_USER = 'root'
+    DB_DATABASE = 'jannet'
+    DB_HOST = 'localhost'
+
     HTML_IMPORTANCE_MAP = {
         "title": 10,
         "h1": 9,
