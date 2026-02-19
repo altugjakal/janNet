@@ -28,7 +28,7 @@ class IndexDB:
                          (keyword TEXT,
                           url TEXT,
                           score INTEGER NOT NULL default 0,
-                          PRIMARY KEY (keyword))''')
+                          PRIMARY KEY (keyword, url))''')
 
             c.execute('''CREATE TABLE IF NOT EXISTS vector_index (
                 id,
@@ -178,7 +178,8 @@ class IndexDB:
             c = conn.cursor()
 
             c.executemany(
-                    '''INSERT OR IGNORE INTO keyword_index (url, keyword, score) VALUES (?, ?, ?)''',
+                    '''INSERT INTO keyword_index (url, keyword, score) VALUES (?, ?, ?)
+ON CONFLICT (keyword, url) DO UPDATE SET score = score + excluded.score''',
                     [(url, keyword, score) for keyword, score in pairs.items()]
                 )
 
@@ -188,11 +189,23 @@ class IndexDB:
     def search_index(self, keywords, limit):
         with self.open_db() as conn:
             c = conn.cursor()
-            results = []
+            placeholders = ','.join('?' * len(keywords))
+            query = f''' SELECT keyword_index.url, keyword_index.keyword, urls.content, keyword_index.score
+        FROM keyword_index
+        LEFT JOIN urls ON urls.url = keyword_index.url
+        WHERE keyword_index.keyword IN ({placeholders})
+            '''
 
-            for keyword in keywords:
-                c.execute('''SELECT keyword_index.url, keyword_index.keyword, urls.content, keyword_index.score FROM keyword_index LEFT JOIN urls ON urls.url = keyword_index.url WHERE keyword = ? ORDER BY keyword_index.score LIMIT ?''', (keyword, limit))
-                results += c.fetchall()
+            c.execute(query, (*keywords,))
+            result =  c.fetchall()
+            return result
 
-            return results
+    @locked
+    def get_content_by_url(self, url, limit):
+        with self.open_db() as conn:
+            c = conn.cursor()
+            c.execute('''SELECT content FROM urls WHERE url = ? LIMIT ?''', (url, limit))
+            result = c.fetchone()
+
+            return result
 

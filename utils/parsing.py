@@ -135,8 +135,15 @@ def extract_anchors(html_content):
     tree = html.fromstring(html_content)
 
     anchors = tree.xpath("//a")
-    links = [a.get("href") for a in anchors if a.get("href")]
-    values = [a.text for a in anchors if a.text]
+
+    links = []
+    values = []
+    for a in anchors:
+        href = a.get("href")
+        text = a.text_content().strip()
+        if href and text:
+            links.append(href)
+            values.append(text)
 
     return links, values
 

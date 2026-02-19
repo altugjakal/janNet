@@ -36,10 +36,17 @@ class Config:
     LEXICAL_POOL_SIZE = 100
 
     SEED_URLS = [
-        ["https://en.wikipedia.org/wiki/Search_engine"]
+        ["https://en.wikipedia.org/wiki/Main_Page"],
+        ["https://news.ycombinator.com"],
+        ["https://arxiv.org"],
+        ["https://stackoverflow.com"],
+        ["https://github.com/explore"],
+        ["https://www.bbc.com/news"],
+        ["https://medium.com"],
+        ["https://dev.to"],
     ]
 
-    THREAD_COUNT = 1
+    THREAD_COUNT = 8
 
     assert len(SEED_URLS) == THREAD_COUNT
 

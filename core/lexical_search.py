@@ -39,9 +39,10 @@ class LexicalSearch:
 
         for url, keyword, content, score in locations:
             if url not in contents:
-                contents[url] = content
-                for search_term in terms:
-                    importance = self.assign_importance_by_idf(html_to_clean(content), search_term, total_url_count)
-                    url_temp_scores[url] += importance * score
+                if content:
+                    contents[url] = content
+                    for search_term in terms:
+                        importance = self.assign_importance_by_idf(keyword, total_url_count, kw_counts[search_term])
+                        url_temp_scores[url] += importance * score
 
         return url_temp_scores, contents

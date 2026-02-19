@@ -48,7 +48,7 @@ class Crawl():
             content = make_request(url).text
             print(f"200: {url}")
         except Exception as e:
-            print("Crawling failed for: ", url)
+            print("Crawling failed for: ", url, e)
             self.db.drop_from_queue(url, thread_id=self.thread_id)
             return
 
@@ -58,35 +58,34 @@ class Crawl():
 
         # Discover and queue new URLs
         new_count = 0
-        for anchor in anchors:
-            for a_v in anchor_values:
-                absolute_url = urljoin(url, anchor)
-                absolute_url = absolute_url.rstrip("/")
-                absolute_url = absolute_url.split("#")[0]
+        for anchor, a_v in zip(anchors, anchor_values):
+            absolute_url = urljoin(url, anchor)
+            absolute_url = absolute_url.rstrip("/")
+            absolute_url = absolute_url.split("#")[0]
 
-                pairs = {}
-                for value in extract_words(a_v):
-                    pairs[value] = Config.HTML_IMPORTANCE_MAP.get("p")
+            pairs = {}
+            for value in extract_words(a_v):
+                pairs[value] = Config.HTML_IMPORTANCE_MAP.get("p")
 
-                self.db.manage_for_index(url=absolute_url,pairs=pairs )
-
+            self.db.manage_for_index(url=absolute_url,pairs=pairs )
 
 
-                #add items to index from anchor text value
 
-                if self.db.is_url_visited(absolute_url):
-                    continue
+            #add items to index from anchor text value
 
-                if not absolute_url.startswith(("http://", "https://")):
-                    continue
+            if self.db.is_url_visited(absolute_url):
+                continue
 
-                if absolute_url.endswith(Config.DESIGN_FILE_EXTS):
-                    continue
+            if not absolute_url.startswith(("http://", "https://")):
+                continue
 
-                if not self.db.is_url_visited(absolute_url) and not self.db.is_in_queue(absolute_url,
-                                                                                        thread_id=self.thread_id):
-                    self.db.add_to_queue(absolute_url, thread_id=self.thread_id)
-                    new_count += 1
+            if absolute_url.endswith(Config.DESIGN_FILE_EXTS):
+                continue
+
+            if not self.db.is_url_visited(absolute_url) and not self.db.is_in_queue(absolute_url,
+                                                                                    thread_id=self.thread_id):
+                self.db.add_to_queue(absolute_url, thread_id=self.thread_id)
+                new_count += 1
 
         if new_count > 0:
             print(f"  → Queued {new_count} new URLs")
@@ -118,7 +117,7 @@ class Crawl():
             for text in text_items:
                 words = extract_words(text)  # Get list of words
                 for word in words:
-                    tf = text.lower().count(clean_content.lower())
+                    tf = clean_content.lower().count(word.lower())
                     tf = 1 + log1p(tf)
                     tf_capped = min(tf, 3)
                     keyword_pairs[word] += importance * tf_capped
