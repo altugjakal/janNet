@@ -17,11 +17,11 @@ class Config:
 
     FIRST_POOL_SIZE = 10
 
-    DB_PASSWORD = 'AVNS_hZabM_xFW7WDqJyALT8'
-    DB_USER = 'doadmin'
-    DB_DATABASE = 'defaultdb'
+    DB_PASSWORD = ''
+    DB_USER = ''
+    DB_DATABASE = ''
     DB_PORT = 25060
-    DB_HOST = 'db-mysql-fra1-39054-do-user-17164387-0.g.db.ondigitalocean.com'
+    DB_HOST = ''
 
     HTML_IMPORTANCE_MAP = {
         "title": 10,
