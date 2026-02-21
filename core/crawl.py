@@ -32,7 +32,6 @@ class Crawl():
         sleep_median = self.sleep_median
         sleep_padding = self.sleep_padding
 
-
         try:
             r_url = get_url_root(url) + "/robots.txt"
             response = make_request(r_url)
@@ -52,29 +51,24 @@ class Crawl():
             self.db.drop_from_queue(url, thread_id=self.thread_id)
             return
 
-
         anchors, anchor_values = extract_anchors(content)
 
+        # Discover and queue new URLs - huge bottleneck, use sets and batch insertion
 
-        # Discover and queue new URLs
+        to_be_queued = set()
         new_count = 0
+        tuples = []
         for anchor, a_v in zip(anchors, anchor_values):
             absolute_url = urljoin(url, anchor)
             absolute_url = absolute_url.rstrip("/")
             absolute_url = absolute_url.split("#")[0]
 
-            pairs = {}
+
             for value in extract_words(a_v):
-                pairs[value] = Config.HTML_IMPORTANCE_MAP.get("p")
-
-            self.db.manage_for_index(url=absolute_url,pairs=pairs )
-
+                tuples.append((absolute_url, value, Config.HTML_IMPORTANCE_MAP.get("p")))
 
 
             #add items to index from anchor text value
-
-            if self.db.is_url_visited(absolute_url):
-                continue
 
             if not absolute_url.startswith(("http://", "https://")):
                 continue
@@ -82,10 +76,12 @@ class Crawl():
             if absolute_url.endswith(Config.DESIGN_FILE_EXTS):
                 continue
 
-            if not self.db.is_url_visited(absolute_url) and not self.db.is_in_queue(absolute_url,
-                                                                                    thread_id=self.thread_id):
-                self.db.add_to_queue(absolute_url, thread_id=self.thread_id)
-                new_count += 1
+            to_be_queued.add(absolute_url)
+            new_count += 1
+
+        self.db.manage_for_index_batch(tuples)
+        self.db.add_to_queue_batch(list(to_be_queued), thread_id=self.thread_id)
+
 
         if new_count > 0:
             print(f"  → Queued {new_count} new URLs")

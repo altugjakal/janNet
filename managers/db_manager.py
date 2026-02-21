@@ -16,7 +16,7 @@ def get_vdb():
 def get_db():
     if not hasattr(_local, 'index'):
         from core.db.index_db import IndexDB
-        _local.db = IndexDB(host=Config.DB_HOST, user=Config.DB_USER, password=Config.DB_PASSWORD, database=Config.DB_DATABASE)
+        _local.db = IndexDB(host=Config.DB_HOST, user=Config.DB_USER, password=Config.DB_PASSWORD, database=Config.DB_DATABASE, port=Config.DB_PORT)
     return _local.db
 
 def get_db_lock():

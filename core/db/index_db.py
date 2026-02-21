@@ -4,12 +4,13 @@ from core.db.thread_lock_wrapper import locked
 
 
 class IndexDB:
-    def __init__(self, host, user, password, database):
+    def __init__(self, host, user, password, database, port):
         self.config = {
             'host': host,
             'user': user,
             'password': password,
-            'database': database
+            'database': database,
+            'port': port
         }
         with self.open_db() as conn:
             c = conn.cursor()
@@ -45,14 +46,14 @@ class IndexDB:
                 url_hash CHAR(64) AS (SHA2(url, 256)) STORED,
                 created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP)''')
 
+
             try:
+                c.execute('CREATE INDEX idx_url_hash ON keyword_index(url_hash)')
+                c.execute('CREATE INDEX idx_queue_url ON queue(url)')
                 c.execute('CREATE INDEX idx_keyword ON keyword_index(keyword)')
             except mysql.connector.errors.DatabaseError:
                 pass
-            try:
-                c.execute('CREATE INDEX idx_url_hash ON keyword_index(url_hash)')
-            except mysql.connector.errors.DatabaseError:
-                pass
+
 
 
             conn.commit()
@@ -76,7 +77,7 @@ class IndexDB:
     def is_url_visited(self, url):
         with self.open_db() as conn:
             c = conn.cursor()
-            c.execute('''SELECT url FROM urls url_hash = SHA2(%s, 256)''', (url,))
+            c.execute('''SELECT url FROM urls WHERE url_hash = SHA2(%s, 256)''', (url,))
             return c.fetchone() is not None
 
     @locked
@@ -121,14 +122,14 @@ class IndexDB:
     def drop_from_queue(self, url, thread_id):
         with self.open_db() as conn:
             c = conn.cursor()
-            c.execute('''DELETE FROM queue url_hash = SHA2(%s, 256) AND issuer_thread_id = %s''', (url, thread_id))
+            c.execute('''DELETE FROM queue WHERE url_hash = SHA2(%s, 256) AND issuer_thread_id = %s''', (url, thread_id))
             conn.commit()
 
     @locked
     def is_in_queue(self, url, thread_id):
         with self.open_db() as conn:
             c = conn.cursor()
-            c.execute('''SELECT url FROM queue url_hash = SHA2(%s, 256) AND issuer_thread_id = %s''', (url, thread_id))
+            c.execute('''SELECT url FROM queue WHERE url_hash = SHA2(%s, 256) AND issuer_thread_id = %s''', (url, thread_id))
             return c.fetchone() is not None
 
     @locked
@@ -188,6 +189,17 @@ class IndexDB:
             conn.commit()
 
     @locked
+    def manage_for_index_batch(self, tuples):
+        with self.open_db() as conn:
+            c = conn.cursor()
+            c.executemany(
+                '''INSERT INTO keyword_index (url, keyword, score) VALUES (%s, %s, %s)
+                   ON DUPLICATE KEY UPDATE score = score + VALUES(score)''',
+                tuples
+            )
+            conn.commit()
+
+    @locked
     def search_index(self, keywords, limit):
         with self.open_db() as conn:
             c = conn.cursor()
@@ -196,7 +208,7 @@ class IndexDB:
                     FROM keyword_index
                     LEFT JOIN urls ON urls.url_hash = keyword_index.url_hash
                     WHERE keyword_index.keyword IN ({placeholders})
-                        '''
+                        LIMIT %s'''
             c.execute(query, (*keywords, limit))
             return c.fetchall()
 
