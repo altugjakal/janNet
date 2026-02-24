@@ -20,6 +20,8 @@ A hybrid search engine combining traditional keyword matching with neural vector
 - [x] Web UI
 - [x] API endpoints
 
+I am currently reading the book "Information Retrieval - Implementing and evaluating search engines" by the MIT Press, the lexical search module is subject to change in the following weeks.
+
 ## Performance
 
 *Benchmarks coming soon' could use additional help here*
