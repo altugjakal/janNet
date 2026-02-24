@@ -17,11 +17,11 @@ class Config:
 
     FIRST_POOL_SIZE = 10
 
-    DB_PASSWORD = ''
-    DB_USER = ''
-    DB_DATABASE = ''
+    DB_PASSWORD = 'AVNS_hZabM_xFW7WDqJyALT8'
+    DB_USER = 'doadmin'
+    DB_DATABASE = 'defaultdb'
     DB_PORT = 25060
-    DB_HOST = ''
+    DB_HOST = 'db-mysql-fra1-39054-do-user-17164387-0.g.db.ondigitalocean.com'
 
     HTML_IMPORTANCE_MAP = {
         "title": 10,
@@ -39,14 +39,16 @@ class Config:
         "param": 3
     }
 
-    LEXICAL_POOL_SIZE = 100
+    LEXICAL_POOL_SIZE = 30
+    SEMANTIC_POOL_SIZE = 30
 
     SEED_URLS = [
-        ["https://en.wikipedia.org/wiki/Main_Page"]
+        ["https://en.wikipedia.org/wiki/Information_retrieval"],
+        ["https://en.wikipedia.org/wiki/Search_engine"],
+        ["https://arxiv.org/list/cs.AI/recent"],
     ]
 
-    THREAD_COUNT = 1
-
+    THREAD_COUNT = 3
     assert len(SEED_URLS) == THREAD_COUNT
 
     DESIGN_FILE_EXTS = (".png", ".jpg", ".jpeg", ".ico", ".webp", ".svg", ".css", ".docx")

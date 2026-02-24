@@ -1,7 +1,5 @@
 import random
 import time
-import traceback
-import urllib
 from collections import defaultdict
 from math import log1p
 
@@ -53,7 +51,7 @@ class Crawl():
 
         anchors, anchor_values = extract_anchors(content)
 
-        # Discover and queue new URLs - huge bottleneck, use sets and batch insertion
+        # Discover and queue new URLs - huge bottleneck, use sets and batch insertion - sorted
 
         to_be_queued = set()
         new_count = 0
@@ -65,7 +63,8 @@ class Crawl():
 
 
             for value in extract_words(a_v):
-                tuples.append((absolute_url, value, Config.HTML_IMPORTANCE_MAP.get("p")))
+                tuples.append((absolute_url, value, Config.HTML_IMPORTANCE_MAP.get("h1")))
+                tuples.append((url, value, Config.HTML_IMPORTANCE_MAP.get("p")))
 
 
             #add items to index from anchor text value
@@ -118,7 +117,7 @@ class Crawl():
                     tf_capped = min(tf, 3)
                     keyword_pairs[word] += importance * tf_capped
 
-        # add overlap logic + passage ranking
+        #add overlap logic + passage ranking sometime, gotta handle the dist vector db first
 
         words = clean_content.split()
         for i in range(0, len(words), 400):

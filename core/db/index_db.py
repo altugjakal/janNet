@@ -1,6 +1,6 @@
 import mysql.connector
 from contextlib import contextmanager
-from core.db.thread_lock_wrapper import locked
+from utils.thread_lock_wrapper import locked
 
 
 class IndexDB:
@@ -207,7 +207,7 @@ class IndexDB:
             query = f''' SELECT keyword_index.url, keyword_index.keyword, urls.content, keyword_index.score
                     FROM keyword_index
                     LEFT JOIN urls ON urls.url_hash = keyword_index.url_hash
-                    WHERE keyword_index.keyword IN ({placeholders})
+                    WHERE keyword_index.keyword IN ({placeholders}) ORDER BY keyword_index.score DESC
                         LIMIT %s'''
             c.execute(query, (*keywords, limit))
             return c.fetchall()

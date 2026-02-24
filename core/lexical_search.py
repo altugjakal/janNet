@@ -10,6 +10,7 @@ from utils.config import Config
 from utils.misc import make_request
 from utils.misc import extract_words
 from utils.parsing import reformat_html_tags, html_to_clean, get_domain, get_tld
+from utils.timer_wrapper import timed
 
 
 class LexicalSearch:
@@ -22,6 +23,7 @@ class LexicalSearch:
         base_importance = idf * (1 + phrase_bonus)
         return base_importance
 
+    @timed
     def search(self, term):
 
         terms = extract_words(term)
@@ -38,6 +40,7 @@ class LexicalSearch:
             kw_counts[term] = self.db.get_total_kw_count(term.lower())
 
         for url, keyword, content, score in locations:
+
             if url not in contents:
                 if content:
                     contents[url] = content

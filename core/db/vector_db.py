@@ -3,7 +3,7 @@ import torch
 from managers.model_manager import get_model
 import numpy as np
 import faiss
-from core.db.thread_lock_wrapper import locked
+from utils.thread_lock_wrapper import locked
 from utils.config import Config
 
 class VectorDB:
@@ -22,7 +22,7 @@ class VectorDB:
             self.base_index = faiss.IndexFlatL2(dimension)
             self.index = faiss.IndexIDMap2(self.base_index)
 
-# handle multiple passages here, id is not the unique identifier here
+# gotta handle multiple passages here, id is not the unique identifier here
     @locked
     def insert(self, text, id):
         vector = self.vectorise_text(text)
@@ -46,7 +46,7 @@ class VectorDB:
         self.index.reconstruct(id)
 
     @locked
-    def euclidian_d(self, query_vector, k=10):
+    def euclidian_d(self, query_vector, k=Config.SEMANTIC_POOL_SIZE):
         faiss.omp_set_num_threads(1)
         query = np.array([query_vector]).astype('float32')
         distances, ids = self.index.search(query, k)

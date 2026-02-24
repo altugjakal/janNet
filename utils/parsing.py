@@ -22,15 +22,12 @@ def reformat_html_tags(html_content):
 
     title = []
 
-    # <title>
     t = tree.xpath("string(//title)")
     if t:
         title.append(t.strip())
 
-    # og:title (case-insensitive)
     title += tree.xpath("//meta[translate(@property,'ABCDEFGHIJKLMNOPQRSTUVWXYZ','abcdefghijklmnopqrstuvwxyz')='og:title']/@content")
 
-    # twitter:title
     title += tree.xpath("//meta[translate(@name,'ABCDEFGHIJKLMNOPQRSTUVWXYZ','abcdefghijklmnopqrstuvwxyz')='twitter:title']/@content")
 
     headings = []
@@ -42,7 +39,6 @@ def reformat_html_tags(html_content):
             if el.text_content().strip()
         ])
 
-    # --- DESCRIPTION ---
     desc_xpath = [
         "//meta[translate(@name,'ABCDEFGHIJKLMNOPQRSTUVWXYZ','abcdefghijklmnopqrstuvwxyz')='description']/@content",
         "//meta[translate(@property,'ABCDEFGHIJKLMNOPQRSTUVWXYZ','abcdefghijklmnopqrstuvwxyz')='og:description']/@content",
@@ -55,18 +51,14 @@ def reformat_html_tags(html_content):
             desc = [" ".join(result[0].split())]
             break
 
-    # --- PARAGRAPHS: extract all visible text from body ---
     body = tree.xpath("//body")
     paragraphs = []
     seen = set()
 
     if body:
         for element in body[0].iter():
-            # Skip non-content tags
             if element.tag in ('script', 'style', 'noscript', 'meta', 'link', 'br', 'hr', 'img'):
                 continue
-
-            # Get direct text of this element (not children's text)
             texts = []
             if element.text and element.text.strip():
                 texts.append(element.text.strip())
@@ -95,36 +87,29 @@ def reformat_html_tags(html_content):
 
 
 def html_to_clean(html):
-    # Remove comments first
+    #god i hate this
 
     html = re.sub(r'<!--.*?-->', '', html, flags=re.DOTALL)
 
-    # Remove script and style tags (these are most important)
     html = re.sub(r'<script[^>]*>.*?</script>', '', html, flags=re.DOTALL | re.IGNORECASE)
     html = re.sub(r'<style[^>]*>.*?</style>', '', html, flags=re.DOTALL | re.IGNORECASE)
 
-    # Remove head entirely
     html = re.sub(r'<head[^>]*>.*?</head>', '', html, flags=re.DOTALL | re.IGNORECASE)
 
-    # Remove header, nav, footer, aside (run multiple times for nested)
     for _ in range(5):
         html = re.sub(r'<header[^>]*>.*?</header>', '', html, flags=re.DOTALL | re.IGNORECASE)
         html = re.sub(r'<nav[^>]*>.*?</nav>', '', html, flags=re.DOTALL | re.IGNORECASE)
         html = re.sub(r'<footer[^>]*>.*?</footer>', '', html, flags=re.DOTALL | re.IGNORECASE)
         html = re.sub(r'<aside[^>]*>.*?</aside>', '', html, flags=re.DOTALL | re.IGNORECASE)
 
-    # Remove other junk tags
     html = re.sub(r'<(iframe|noscript|form|button|svg|input|select|textarea)[^>]*>.*?</\1>', '', html,
                   flags=re.DOTALL | re.IGNORECASE)
     html = re.sub(r'<(iframe|noscript|form|button|svg|input|select|textarea)[^>]*/>', '', html, flags=re.IGNORECASE)
 
-    # Remove all remaining tags
     html = re.sub(r'<[^>]+>', ' ', html)
 
-    # Remove HTML entities
     html = re.sub(r'&[a-zA-Z0-9#]+;', ' ', html)
 
-    # Clean whitespace
     html = re.sub(r'\s+', ' ', html).strip()
 
     return html

@@ -1,4 +1,5 @@
 from utils.parsing import html_to_clean
+from utils.timer_wrapper import timed
 
 
 class SemanticSearch():
@@ -6,6 +7,7 @@ class SemanticSearch():
         self.db = db
         self.vdb = vdb
 
+    @timed
     def search(self, term):
 
         term_vector = self.vdb.vectorise_text(term)

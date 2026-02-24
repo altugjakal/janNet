@@ -6,6 +6,7 @@ from core.semantic_search import SemanticSearch
 from utils.config import Config
 from core.maxsim import MaxSim
 from utils.parsing import html_to_clean, get_tld, get_domain
+from utils.timer_wrapper import timed
 
 
 class HybridSearch:
@@ -37,6 +38,7 @@ class HybridSearch:
         base_score = importance * tld_multiplier
         return base_score
 
+    @timed
     def combined_search(self, term):
         vector_weight = self.vector_weight
         kw_weight = self.kw_weight
