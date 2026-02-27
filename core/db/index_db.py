@@ -204,11 +204,18 @@ class IndexDB:
         with self.open_db() as conn:
             c = conn.cursor()
             placeholders = ','.join(['%s'] * len(keywords))
-            query = f''' SELECT keyword_index.url, keyword_index.keyword, urls.content, keyword_index.score
-                    FROM keyword_index
-                    LEFT JOIN urls ON urls.url_hash = keyword_index.url_hash
-                    WHERE keyword_index.keyword IN ({placeholders}) ORDER BY keyword_index.score DESC
-                        LIMIT %s'''
+            query = f''' SELECT 
+    keyword_index.url, 
+    keyword_index.keyword, 
+    urls.content, 
+    keyword_index.score
+FROM keyword_index
+LEFT JOIN urls ON urls.url_hash = keyword_index.url_hash
+WHERE keyword_index.keyword IN ({placeholders})
+ORDER BY 
+    COUNT(*) OVER (PARTITION BY keyword_index.url) DESC,
+    keyword_index.score DESC
+LIMIT %s'''
             c.execute(query, (*keywords, limit))
             return c.fetchall()
 

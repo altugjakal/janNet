@@ -15,21 +15,27 @@ body {
     height: 80%;
 }
 
+.container-logo {
+  position: relative;
+  display: inline-block;
+}
+
+.container-logo img {
+  display: block;
+  width: 100%;
+}
 
 .logo {
-    font-size: 96px;
-    line-height: 0.8;
-    color: rgb(179, 13, 13);
-    font-weight: bolder;
-    font-family: 'Brush Script MT', cursive;
-    margin: 0;
-}
-.version {
-    font-size: 18px;
-    color: gray;
-    font-family: system-ui;
-    font-style: italic;
-
+  font-size: 96px;
+  line-height: 0.8;
+  color: rgb(179, 13, 13);
+  font-weight: bolder;
+  font-family: 'Brush Script MT', cursive;
+  position: absolute;
+  z-index: 1;
+  bottom: 120px;
+  left: 45%;
+  transform: translateX(-50%);
 }
 
 .button-container {
@@ -100,6 +106,7 @@ body {
     padding: 10px 0;
     font-size: 14px;
     color: #555;
+    z-index: 2;
 }
 
 .site-profile {
@@ -139,7 +146,7 @@ body {
     margin-left: auto;
     margin-right: auto;
     padding: 20px 40px 40px 40px;
-    margin-top: 10vh;
+    margin-top: 0;
     bottom: 0;
 }
 

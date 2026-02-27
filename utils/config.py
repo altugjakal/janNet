@@ -43,12 +43,10 @@ class Config:
     SEMANTIC_POOL_SIZE = 30
 
     SEED_URLS = [
-        ["https://en.wikipedia.org/wiki/Information_retrieval"],
-        ["https://en.wikipedia.org/wiki/Search_engine"],
-        ["https://arxiv.org/list/cs.AI/recent"],
+        ["http://localhost:8000/"]
     ]
 
-    THREAD_COUNT = 3
+    THREAD_COUNT = 1
     assert len(SEED_URLS) == THREAD_COUNT
 
     DESIGN_FILE_EXTS = (".png", ".jpg", ".jpeg", ".ico", ".webp", ".svg", ".css", ".docx")
