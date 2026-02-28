@@ -13,13 +13,19 @@ class SemanticSearch():
         term_vector = self.vdb.vectorise_text(term)
         vectors = self.vdb.euclidian_d(term_vector)
 
+        map_s = {}
+
         url_scores = {}
         url_contents = {}
+        vector_ids = [v['id'] for v in vectors]
+        ids, urls, contents = self.db.get_url_by_vector_id_batch(vector_ids)
+
         for vector in vectors:
+            map_s[vector['id']] = vector['score']
 
-            url, content = self.db.get_url_by_vector_id(vector['id'])
+        for id, url, content in zip(ids, urls, contents):
 
-            url_scores[url] = vector['score']
+            url_scores[url] = map_s[id]
             url_contents[url] = content
 
         return url_scores, url_contents

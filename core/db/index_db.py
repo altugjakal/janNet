@@ -105,6 +105,23 @@ class IndexDB:
             return c.fetchone()[0]
 
     @locked
+    def get_total_kw_count_batch(self, keywords):
+        with self.open_db() as conn:
+            r_map = {}
+            placeholders = ', '.join(['%s'] * len(keywords))
+            c = conn.cursor()
+            c.execute(
+                f'''SELECT COUNT(*), keyword FROM keyword_index WHERE keyword IN ({ placeholders }) GROUP BY keyword''', keywords)
+            results = c.fetchall()
+            for keyword in keywords:
+                r_map[keyword] = 0
+
+            for count, keyword in results:
+                r_map[keyword] = count
+
+        return r_map
+
+    @locked
     def get_total_url_count(self):
         with self.open_db() as conn:
             c = conn.cursor()
@@ -176,6 +193,25 @@ class IndexDB:
                          LEFT JOIN urls ON vector_index.url_hash = urls.url_hash
                          WHERE embedding_id = %s''', (vector_id,))
             return c.fetchone()
+
+    @locked
+    def get_url_by_vector_id_batch(self, vector_ids):
+        with self.open_db() as conn:
+            urls = []
+            contents = []
+            ids = []
+            placeholders = ', '.join(['%s'] * len(vector_ids))
+            c = conn.cursor()
+            c.execute(f'''SELECT embedding_id, vector_index.url, urls.content FROM vector_index 
+                         LEFT JOIN urls ON vector_index.url_hash = urls.url_hash
+                         WHERE embedding_id IN({ placeholders })''', vector_ids)
+            results = c.fetchall()
+            for id, url, content in results:
+                ids.append(id)
+                urls.append(url)
+                contents.append(content)
+
+            return ids, urls, contents
 
     @locked
     def manage_for_index(self, url, pairs):
