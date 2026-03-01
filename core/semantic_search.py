@@ -2,7 +2,7 @@ from utils.parsing import html_to_clean
 from utils.timer_wrapper import timed
 
 
-class SemanticSearch():
+class SemanticSearch:
     def __init__(self, db=None, vdb=None):
         self.db = db
         self.vdb = vdb

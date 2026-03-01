@@ -13,7 +13,7 @@
 
     <div class="inner-container">
     <div class='search-container'>
-        <div style="display: flex; flex-direction: column; gap 2px;">
+        <div style="display: flex; flex-direction: column; gap: 2px;">
         <div class="container-logo">
           <img src="/static/images/jannet.png" alt="Snow" style="width:100%;">
         <h1 class="logo">janNet</h1>
@@ -36,7 +36,8 @@
 
     <div id="result-container">
     </div>
-</div>  
+
+</div>
     <div class="footer">
         <p>&copy; 2025 janNet. All rights reserved.</p>
     </div>
@@ -44,7 +45,6 @@
     <script>
         let params = new URLSearchParams(document.location.search);
         if(params.get('param')) {
-
             search(params.get('param'))
         }
 
@@ -54,6 +54,36 @@
             return div.innerHTML;
         }
 
+        async function recommend(input) {
+            input = decodeURIComponent(input);
+
+            const response = await fetch("/requery/?url=" + encodeURIComponent(input), {
+                method: "GET"
+            });
+
+            const data = await response.json();
+
+            const container = document.getElementById('result-container');
+
+            console.log(data.results);
+
+            container.innerHTML = `
+        <div class="result-wrapper sidebar">
+            <h2>Showing similar sources</h2>
+            ${data.summary ? `<p class="summary">${data.summary}</p>` : ''}
+            ${data.results.map(item => `
+                <div class="result-item">
+                    <div class='site-profile'>
+                        <img src="${item.favicon}" alt="Favicon" class="favicon">
+                        <a href="${item.url}" class="domain-link"><span class="domain">${item.domain}</span></a>
+                    </div>
+                    <h4>${escapeHtml(item.title)}</h4>
+                    <p>${escapeHtml(item.description)}</p>
+                    <a href="${item.url}">${item.url}</a>
+                </div>
+            `).join('')}
+        </div>`;
+        }
 
         async function search(input) {
 
@@ -72,39 +102,38 @@
 
             container.innerHTML = `
         <div class="result-wrapper">
-            <h2>Search Results for "${input}"</h2>
+            <h2>Search Results for "${escapeHtml(input)}"</h2>
             ${data.summary ? `<p class="summary">${data.summary}</p>` : ''}
             ${data.results.map(item => `
                 <div class="result-item">
                     <div class='site-profile'>
                         <img src="${item.favicon}" alt="Favicon" class="favicon">
-
                         <a href="${item.url}" class="domain-link"><span class="domain">${item.domain}</span></a>
                     </div>
                     <h4>${escapeHtml(item.title)}</h4>
                     <p>${escapeHtml(item.description)}</p>
+                    <button onclick="recommend('${encodeURIComponent(item.url)}')"
+                        style="padding: 2px 10px; border-radius: 999px; border: 1px solid #ccc; background: transparent; font-size: 0.75rem; cursor: pointer; color: #555; margin: 4px 0;">
+                        More...
+                    </button>
                     <a href="${item.url}">${item.url}</a>
                 </div>
             `).join('')}
         </div>`;
-        
+
         }
 
         async function searchInput(e) {
             e.preventDefault();
             const input = document.getElementById("searchInput").value;
-            
-            
 
             if (input.startsWith("http://") || input.startsWith("https://")) {
                 window.location.href = input;
                 return;
             }
 
-            search(input)
+            search(input);
         }
-
-            
 
         function handleKeyPress(event) {
             if (event.key === 'Enter') {

@@ -1,6 +1,7 @@
 import time
 from concurrent.futures import ThreadPoolExecutor
 
+from api.routes.similar import similar_bp
 from managers.db_manager import get_db, get_vdb
 from utils.config import Config
 from flask import Flask
@@ -10,6 +11,7 @@ from api.routes.markup import markup_bp
 
 app = Flask(__name__)
 app.register_blueprint(search_bp, url_prefix='/search')
+app.register_blueprint(similar_bp, url_prefix='/requery')
 app.register_blueprint(markup_bp, url_prefix='/')
 
 host = '0.0.0.0'

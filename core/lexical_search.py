@@ -28,16 +28,15 @@ class LexicalSearch:
         contents = {}
 
         locations = self.db.search_index(terms, limit=Config.LEXICAL_POOL_SIZE)
-        #bneck
+        #bneck - not anymore
         kw_counts = self.db.get_total_kw_count_batch(terms)
 
         for url, keyword, content, score in locations:
 
-            if url not in contents:
-                if content:
-                    contents[url] = content
-                    for search_term in terms:
-                        importance = self.assign_importance_by_idf(keyword, total_url_count, kw_counts[search_term])
-                        url_temp_scores[url] += importance * score
+            if content:
+                contents[url] = content
+                for search_term in terms:
+                    importance = self.assign_importance_by_idf(keyword, total_url_count, kw_counts[search_term])
+                    url_temp_scores[url] += importance * score
 
         return url_temp_scores, contents

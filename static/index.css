@@ -76,7 +76,7 @@ body {
 
 .result-wrapper {
     margin-top: 20px;
-    width: 60vw;
+    max-width: 60vw;
 
 }
 
@@ -94,6 +94,12 @@ body {
     display: flex;
     justify-content: center;
     height: auto;
+}
+
+.sidebar {
+   padding: 10px;
+   border-radius: 15px;
+   background-color: cornsilk;
 }
 
 .footer {

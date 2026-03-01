@@ -2,7 +2,7 @@ from managers.db_manager import get_vdb
 from utils.timer_wrapper import timed
 
 
-class MaxSim():
+class MaxSim:
     def __init__(self, vdb=get_vdb()):
         self.vdb = vdb
 

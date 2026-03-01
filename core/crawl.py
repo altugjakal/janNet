@@ -12,7 +12,7 @@ from utils.misc import extract_words, make_request
 from urllib.parse import urljoin
 
 
-class Crawl():
+class Crawl:
     def __init__(self, sleep_median, sleep_padding, db=get_db(), vdb=get_vdb(), thread_id=None):
 
         self.sleep_median = sleep_median
