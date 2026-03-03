@@ -42,8 +42,11 @@ class Config:
     LEXICAL_POOL_SIZE = 30
     SEMANTIC_POOL_SIZE = 30
 
+    SLEEP_M = 0
+    SLEEP_P = 0
+
     SEED_URLS = [
-        ["http://localhost:8000/"]
+        ["https://en.wikipedia.org/wiki/Philosophy"]
     ]
 
     THREAD_COUNT = 1

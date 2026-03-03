@@ -23,9 +23,8 @@ def main(thread_id):
     global _vdb
     db = get_db()
 
-    crawler = Crawl(sleep_median=0.400, sleep_padding=0.200, db=db, vdb=_vdb, thread_id=thread_id)
+    crawler = Crawl(sleep_median=Config.SLEEP_M, sleep_padding=Config.SLEEP_P, db=db, vdb=_vdb, thread_id=thread_id)
 
-    #problem here
 
     if db.get_queue_size(thread_id=thread_id) == 0:
         db.add_to_queue_batch(Config.SEED_URLS[thread_id], thread_id)

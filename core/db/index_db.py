@@ -186,6 +186,13 @@ class IndexDB:
             conn.commit()
 
     @locked
+    def manage_vector_for_index_batch(self, pairs):
+        with self.open_db() as conn:
+            c = conn.cursor()
+            c.executemany('''INSERT INTO vector_index (embedding_id, url) VALUES (%s, %s)''', pairs)
+            conn.commit()
+
+    @locked
     def get_url_by_vector_id(self, vector_id):
         with self.open_db() as conn:
             c = conn.cursor()
