@@ -1,10 +1,10 @@
 import torch
 
-from managers.model_manager import get_model
+from src.jannet.managers.model_manager import get_model
 import numpy as np
 import faiss
-from utils.thread_lock_wrapper import locked
-from utils.config import Config
+from src.jannet.utils.thread_lock_wrapper import locked
+from src.jannet.utils.config import Config
 
 class VectorDB:
     def __init__(self, dimension=Config.MODEL_OUTPUT_DIM):

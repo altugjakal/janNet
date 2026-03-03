@@ -1,9 +1,9 @@
 from collections import defaultdict
 from math import log1p
 
-from utils.config import Config
-from utils.misc import extract_words
-from utils.timer_wrapper import timed
+from src.jannet.utils.config import Config
+from src.jannet.utils.misc import extract_words
+from src.jannet.utils.timer_wrapper import timed
 
 
 class LexicalSearch:

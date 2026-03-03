@@ -1,11 +1,10 @@
-import time
 from concurrent.futures import ThreadPoolExecutor
 
 from api.routes.similar import similar_bp
-from managers.db_manager import get_db, get_vdb
-from utils.config import Config
+from src.jannet.managers.db_manager import get_db, get_vdb
+from src.jannet.utils.config import Config
 from flask import Flask
-from core.crawl import Crawl
+from src.jannet.core.crawl import Crawl
 from api.routes.search import search_bp
 from api.routes.markup import markup_bp
 

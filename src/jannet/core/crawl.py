@@ -5,13 +5,13 @@ from math import log1p
 
 from protego import Protego
 
-from utils.config import Config
-from managers.db_manager import get_db, get_vdb
-from utils.parsing import extract_anchors, html_to_clean, get_url_root, reformat_html_tags
-from utils.misc import extract_words, make_request
+from src.jannet.utils.config import Config
+from src.jannet.managers.db_manager import get_db, get_vdb
+from src.jannet.utils.parsing import extract_anchors, html_to_clean, get_url_root, reformat_html_tags
+from src.jannet.utils.misc import extract_words, make_request
 from urllib.parse import urljoin
 
-from utils.timer_wrapper import timed
+from src.jannet.utils.timer_wrapper import timed
 
 
 class Crawl:

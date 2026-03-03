@@ -1,5 +1,5 @@
-from managers.db_manager import get_vdb
-from utils.timer_wrapper import timed
+from src.jannet.managers.db_manager import get_vdb
+from src.jannet.utils.timer_wrapper import timed
 
 
 class MaxSim:

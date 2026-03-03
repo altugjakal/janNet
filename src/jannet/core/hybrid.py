@@ -1,12 +1,9 @@
-import urllib
-from math import log1p
-
-from core.lexical_search import LexicalSearch
-from core.semantic_search import SemanticSearch
-from utils.config import Config
-from core.maxsim import MaxSim
-from utils.parsing import html_to_clean, get_tld, get_domain
-from utils.timer_wrapper import timed
+from src.jannet.core.lexical_search import LexicalSearch
+from src.jannet.core.semantic_search import SemanticSearch
+from src.jannet.utils.config import Config
+from src.jannet.core.maxsim import MaxSim
+from src.jannet.utils.parsing import html_to_clean, get_tld, get_domain
+from src.jannet.utils.timer_wrapper import timed
 
 
 class HybridSearch:

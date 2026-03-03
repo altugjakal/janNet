@@ -1,9 +1,8 @@
 import re
 import requests
-from utils.parsing import reformat_html_tags, html_to_clean
+from src.jannet.utils.parsing import reformat_html_tags, html_to_clean
 from nltk.stem import PorterStemmer
 from nltk.corpus import stopwords
-import numpy as np
 
 stop_words = set(stopwords.words('english'))
 

@@ -1,8 +1,8 @@
-from managers.db_manager import get_vdb, get_db
-from core.hybrid import HybridSearch
-from utils.parsing import get_domain, html_to_clean
+from src.jannet.managers.db_manager import get_vdb, get_db
+from src.jannet.core.hybrid import HybridSearch
+from src.jannet.utils.parsing import get_domain, html_to_clean
 from flask import jsonify, Blueprint
-from utils.misc import site_details
+from src.jannet.utils.misc import site_details
 
 
 search_bp = Blueprint('search_bp', __name__)

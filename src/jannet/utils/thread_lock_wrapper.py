@@ -1,4 +1,4 @@
-from managers.db_manager import get_db_lock
+from src.jannet.managers.db_manager import get_db_lock
 from functools import wraps
 
 def locked(func):

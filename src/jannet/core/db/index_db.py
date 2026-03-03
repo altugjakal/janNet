@@ -1,6 +1,6 @@
 import mysql.connector
 from contextlib import contextmanager
-from utils.thread_lock_wrapper import locked
+from src.jannet.utils.thread_lock_wrapper import locked
 
 
 class IndexDB:

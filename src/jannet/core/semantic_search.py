@@ -1,22 +1,21 @@
-from utils.timer_wrapper import timed
+from src.jannet.utils.timer_wrapper import timed
 
 
-class Requery:
+class SemanticSearch:
     def __init__(self, db=None, vdb=None):
         self.db = db
         self.vdb = vdb
 
     @timed
-    def find_similar(self, url):
-        document_content = self.db.get_content_by_url(url, limit=4)
-        document_content = document_content[0]
-        content_vector = self.vdb.vectorise_text(document_content)
-        vectors = self.vdb.euclidian_d(content_vector)
+    def search(self, term):
+
+        term_vector = self.vdb.vectorise_text(term)
+        vectors = self.vdb.euclidian_d(term_vector)
+
         map_s = {}
+
         url_scores = {}
         url_contents = {}
-
-        vectors = sorted(vectors, key=lambda x: x['score'], reverse=True)
         vector_ids = [v['id'] for v in vectors]
         ids, urls, contents = self.db.get_url_by_vector_id_batch(vector_ids)
 
@@ -28,6 +27,6 @@ class Requery:
             url_scores[url] = map_s[id]
             url_contents[url] = content
 
+        return url_scores, url_contents
 
-        return [url for url, score in url_scores.items()], [content for content in list(url_contents.values())]
 

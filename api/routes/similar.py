@@ -1,8 +1,8 @@
-from core.requery import Requery
-from managers.db_manager import get_vdb, get_db
-from utils.parsing import get_domain, html_to_clean
+from src.jannet.core.requery import Requery
+from src.jannet.managers.db_manager import get_vdb, get_db
+from src.jannet.utils.parsing import get_domain, html_to_clean
 from flask import jsonify, Blueprint, request
-from utils.misc import site_details
+from src.jannet.utils.misc import site_details
 
 
 similar_bp = Blueprint('similar_bp', __name__)

@@ -1,5 +1,5 @@
-from managers.model_manager import get_model
-from utils.parsing import html_to_clean
+from src.jannet.managers.model_manager import get_model
+from src.jannet.utils.parsing import html_to_clean
 
 model = get_model()
 html = '''<!DOCTYPE html>

@@ -1,5 +1,5 @@
 from sentence_transformers import SentenceTransformer
-from utils.config import Config
+from src.jannet.utils.config import Config
 _model = None
 
 def get_model():

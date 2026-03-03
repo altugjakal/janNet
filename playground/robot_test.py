@@ -1,5 +1,5 @@
 import urllib.robotparser as urobot
-from utils.config import Config
+from src.jannet.utils.config import Config
 
 # Test with a real Wikipedia URL
 url = "https://en.wikipedia.org/wiki/Python_(programming_language)"
