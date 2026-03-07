@@ -16,7 +16,7 @@ class SemanticSearch:
 
         url_scores = {}
         url_contents = {}
-        vector_ids = [v['id'] for v in vectors]
+        vector_ids = tuple([v['id'] for v in vectors])
         ids, urls, contents = self.db.get_url_by_vector_id_batch(vector_ids)
 
         for vector in vectors:

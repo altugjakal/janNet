@@ -1,5 +1,7 @@
 from concurrent.futures import ThreadPoolExecutor
 
+from flask_cors import CORS
+
 from api.routes.similar import similar_bp
 from src.jannet.managers.db_manager import get_db, get_vdb
 from src.jannet.utils.config import Config
@@ -8,7 +10,9 @@ from src.jannet.core.crawl import Crawl
 from api.routes.search import search_bp
 from api.routes.markup import markup_bp
 
+
 app = Flask(__name__)
+CORS(app)
 app.register_blueprint(search_bp, url_prefix='/search')
 app.register_blueprint(similar_bp, url_prefix='/requery')
 app.register_blueprint(markup_bp, url_prefix='/')
@@ -16,6 +20,7 @@ app.register_blueprint(markup_bp, url_prefix='/')
 host = '0.0.0.0'
 port = 5004
 _vdb = get_vdb()
+
 
 
 def main(thread_id):
@@ -46,7 +51,7 @@ def main(thread_id):
         crawler.crawl(url)
         crawl_count += 1
 
-    _vdb.save_to_disk()
+
 
 
 if __name__ == "__main__":
@@ -66,5 +71,6 @@ if __name__ == "__main__":
             try:
                 app.run(host=host, port=port, debug=False, use_reloader=False)
             finally:
+                _vdb.save_to_disk()
                 print("Shutting down crawlers...")
                 exe.shutdown(wait=True)

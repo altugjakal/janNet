@@ -42,11 +42,11 @@ class Config:
     LEXICAL_POOL_SIZE = 30
     SEMANTIC_POOL_SIZE = 30
 
-    SLEEP_M = 0
+    SLEEP_M = 1
     SLEEP_P = 0
 
     SEED_URLS = [
-        ["https://en.wikipedia.org/wiki/Philosophy"]
+        ["https://wikipedia.com/"]
     ]
 
     THREAD_COUNT = 1

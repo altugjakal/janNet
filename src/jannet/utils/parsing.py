@@ -87,7 +87,7 @@ def reformat_html_tags(html_content):
 
 
 def html_to_clean(html):
-    #god i hate this
+    #god i hate this, fuck
 
     html = re.sub(r'<!--.*?-->', '', html, flags=re.DOTALL)
 
@@ -116,10 +116,12 @@ def html_to_clean(html):
 
 
 def extract_anchors(html_content):
-    html_content = html_content.lower()
     tree = html.fromstring(html_content)
 
-    anchors = tree.xpath("//a")
+
+    if tree:
+        anchors = tree.xpath("//a")
+
 
     links = []
     values = []
@@ -129,6 +131,7 @@ def extract_anchors(html_content):
         if href and text:
             links.append(href)
             values.append(text)
+
 
     return links, values
 

@@ -16,10 +16,18 @@ class IndexDB:
             c = conn.cursor()
 
             c.execute('''CREATE TABLE IF NOT EXISTS urls
-                         (url VARCHAR(2048),
-                        url_hash CHAR(64) AS (SHA2(url, 256)) STORED PRIMARY KEY,
+                         (id INTEGER AUTO_INCREMENT PRIMARY KEY,
+                         url VARCHAR(2048),
+                        url_hash CHAR(64) AS (SHA2(url, 256)) STORED,
                          content LONGTEXT NOT NULL,
                           crawled_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP)''')
+
+            c.execute('''CREATE TABLE IF NOT EXISTS link_graph (
+            from_url_id INT,
+            to_url_id INT,
+            crawled_at TIMESTAMP DEFAULT NOW(),
+            PRIMARY KEY (from_url_id, to_url_id)
+            )''')
 
             c.execute('''CREATE TABLE IF NOT EXISTS queue
             
@@ -48,9 +56,10 @@ class IndexDB:
 
 
             try:
-                c.execute('CREATE INDEX idx_url_hash ON keyword_index(url_hash)')
+                c.execute('CREATE INDEX idx_url_hash ON keyword_index(id)')
                 c.execute('CREATE INDEX idx_queue_url ON queue(url)')
                 c.execute('CREATE INDEX idx_keyword ON keyword_index(keyword)')
+
             except mysql.connector.errors.DatabaseError:
                 pass
 

@@ -43,6 +43,7 @@ class Crawl:
                 self.db.drop_from_queue(url, thread_id=self.thread_id)
                 print(f"Not allowed to crawl {url}")
                 return
+            delay = rp.crawl_delay(Config.USER_AGENT)
         except Exception as e:
             print(f"Could not fetch robots.txt for: {url} {e}")
         print(f"[TIMER] robots.txt fetch+parse: {time.perf_counter() - t0:.3f}s");
@@ -58,7 +59,12 @@ class Crawl:
         print(f"[TIMER] page fetch: {time.perf_counter() - t1:.3f}s");
         t2 = time.perf_counter()
 
+        if not content:
+            self.db.drop_from_queue(url, thread_id=self.thread_id)
+            return
+
         anchors, anchor_values = extract_anchors(content)
+        #the program has a stroke here
 
         to_be_queued = set()
         new_count = 0
@@ -154,4 +160,4 @@ class Crawl:
 
         print(f"[TIMER] TOTAL crawl (excl. sleep): {time.perf_counter() - t0:.3f}s")
 
-        time.sleep(sleep_median + random.uniform(-sleep_padding, sleep_padding))
+        time.sleep(delay if delay else (sleep_median + random.uniform(-sleep_padding, sleep_padding)))
