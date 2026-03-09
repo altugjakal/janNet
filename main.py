@@ -10,7 +10,6 @@ from src.jannet.core.crawl import Crawl
 from api.routes.search import search_bp
 from api.routes.markup import markup_bp
 
-
 app = Flask(__name__)
 CORS(app)
 app.register_blueprint(search_bp, url_prefix='/search')
@@ -22,36 +21,32 @@ port = 5004
 _vdb = get_vdb()
 
 
-
 def main(thread_id):
     global _vdb
     db = get_db()
 
     crawler = Crawl(sleep_median=Config.SLEEP_M, sleep_padding=Config.SLEEP_P, db=db, vdb=_vdb, thread_id=thread_id)
 
-
     if db.get_queue_size(thread_id=thread_id) == 0:
-        db.add_to_queue_batch(Config.SEED_URLS[thread_id], thread_id)
 
-
+        db.add_to_queue_batch([(hash(url) % (10 ** 9), url) for url in Config.SEED_URLS[thread_id]], thread_id)
 
     crawl_count = 0
 
     while crawl_count < Config.MAX_CRAWLS:
 
-
         queue = db.get_queue_batch(thread_id=thread_id)
+
 
         if len(queue) == 0:
             print("Queue empty!")
             break
 
         url = queue[0][0]
+        id = queue[0][1]
 
-        crawler.crawl(url)
+        crawler.crawl(url, id)
         crawl_count += 1
-
-
 
 
 if __name__ == "__main__":

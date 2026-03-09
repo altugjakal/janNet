@@ -16,9 +16,9 @@ class IndexDB:
             c = conn.cursor()
 
             c.execute('''CREATE TABLE IF NOT EXISTS urls
-                         (id INTEGER AUTO_INCREMENT PRIMARY KEY,
+                         (id INTEGER PRIMARY KEY,
                          url VARCHAR(2048),
-                        url_hash CHAR(64) AS (SHA2(url, 256)) STORED,
+                        url_hash CHAR(64) AS (SHA2(url, 256)) STORED ,
                          content LONGTEXT NOT NULL,
                           crawled_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP)''')
 
@@ -32,7 +32,8 @@ class IndexDB:
             c.execute('''CREATE TABLE IF NOT EXISTS queue
             
                          (url VARCHAR(2048),
-                         url_hash CHAR(64) AS (SHA2(url, 256)) STORED PRIMARY KEY,
+                         url_hash CHAR(64) AS (SHA2(url, 256)) STORED,
+                         id INTEGER NOT NULL PRIMARY KEY,
                          issuer_thread_id INTEGER NOT NULL,
                           added_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP)''')
 
@@ -56,7 +57,6 @@ class IndexDB:
 
 
             try:
-                c.execute('CREATE INDEX idx_url_hash ON keyword_index(id)')
                 c.execute('CREATE INDEX idx_queue_url ON queue(url)')
                 c.execute('CREATE INDEX idx_keyword ON keyword_index(keyword)')
 
@@ -72,14 +72,17 @@ class IndexDB:
         conn = mysql.connector.connect(**self.config)
         try:
             yield conn
+        except Exception as e:
+            conn.rollback()
+            raise
         finally:
             conn.close()
 
     @locked
-    def add_url(self, url, content):
+    def add_url(self, id, url, content):
         with self.open_db() as conn:
             c = conn.cursor()
-            c.execute('''INSERT IGNORE INTO urls (url, content) VALUES (%s, %s)''', (url, content))
+            c.execute('''INSERT IGNORE INTO urls (id, url, content) VALUES (%s, %s, %s)''', (id, url, content))
             conn.commit()
 
     @locked
@@ -90,19 +93,19 @@ class IndexDB:
             return c.fetchone() is not None
 
     @locked
-    def add_to_queue(self, url, thread_id):
+    def add_to_queue(self, id, url, thread_id):
         with self.open_db() as conn:
             c = conn.cursor()
-            c.execute('''INSERT IGNORE INTO queue (url, issuer_thread_id) VALUES (%s, %s)''', (url, thread_id))
+            c.execute('''INSERT IGNORE INTO queue (id, url, issuer_thread_id) VALUES (%s, %s, %s)''', (id, url, thread_id))
             conn.commit()
 
     @locked
-    def add_to_queue_batch(self, urls, thread_id):
+    def add_to_queue_batch(self, pairs, thread_id):
         with self.open_db() as conn:
             c = conn.cursor()
             c.executemany(
-                '''INSERT IGNORE INTO queue (url, issuer_thread_id) VALUES (%s, %s)''',
-                [(url, thread_id) for url in urls]
+                '''INSERT IGNORE INTO queue (id, url, issuer_thread_id) VALUES (%s, %s, %s)''',
+                [(id, url, thread_id) for id, url in pairs]
             )
             conn.commit()
 
@@ -120,7 +123,7 @@ class IndexDB:
             placeholders = ', '.join(['%s'] * len(keywords))
             c = conn.cursor()
             c.execute(
-                f'''SELECT COUNT(*), keyword FROM keyword_index WHERE keyword IN ({ placeholders }) GROUP BY keyword''', keywords)
+                f'''SELECT COUNT(*), keyword FROM keyword_index WHERE keyword IN ({ placeholders }) GROUP BY keyword''', tuple(keywords))
             results = c.fetchall()
             for keyword in keywords:
                 r_map[keyword] = 0
@@ -162,7 +165,7 @@ class IndexDB:
     def get_queue_batch(self, thread_id, limit=1000):
         with self.open_db() as conn:
             c = conn.cursor()
-            c.execute('''SELECT url FROM queue WHERE issuer_thread_id = %s ORDER BY added_at ASC LIMIT %s''',
+            c.execute('''SELECT url, id FROM queue WHERE issuer_thread_id = %s ORDER BY added_at ASC LIMIT %s''',
                       (thread_id, limit))
             return c.fetchall()
 
@@ -220,7 +223,7 @@ class IndexDB:
             c = conn.cursor()
             c.execute(f'''SELECT embedding_id, vector_index.url, urls.content FROM vector_index 
                          LEFT JOIN urls ON vector_index.url_hash = urls.url_hash
-                         WHERE embedding_id IN({ placeholders })''', vector_ids)
+                         WHERE embedding_id IN({ placeholders })''', tuple(vector_ids))
             results = c.fetchall()
             for id, url, content in results:
                 ids.append(id)
@@ -277,3 +280,35 @@ LIMIT %s'''
             c = conn.cursor()
             c.execute('''SELECT content FROM urls WHERE url = %s LIMIT %s''', (url, limit))
             return c.fetchone()
+
+    @locked
+    def add_link_relation_batch(self, pairs):
+        with self.open_db() as conn:
+            pairs = list(pairs)
+            c = conn.cursor()
+            c.executemany(
+                '''INSERT INTO link_graph (to_url_id, from_url_id) VALUES (%s, %s)''',
+            pairs
+            )
+            conn.commit()
+
+
+    def get_all_link_relation(self):
+        with self.open_db() as conn:
+            c = conn.cursor()
+            c.execute('''SELECT to_url_id, from_url_id FROM link_graph''')
+            return c.fetchall()
+
+    #remove when done testing pagerank
+    def get_url_by_id(self, id):
+        with self.open_db() as conn:
+            c = conn.cursor()
+
+            c.execute('SELECT url FROM urls WHERE id = %s', (id,))
+            result = c.fetchone()
+
+            if not result or result[0] is None:
+                c.execute('SELECT url FROM queue WHERE id = %s', (id,))
+                result = c.fetchone()
+
+            return result[0] if result else None

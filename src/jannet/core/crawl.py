@@ -1,5 +1,6 @@
 import random
 import time
+import traceback
 from collections import defaultdict, Counter
 from math import log1p
 
@@ -28,7 +29,7 @@ class Crawl:
         return base_importance
 
     @timed
-    def crawl(self, url):
+    def crawl(self, url, id):
 
         sleep_median = self.sleep_median
         sleep_padding = self.sleep_padding
@@ -63,10 +64,12 @@ class Crawl:
             self.db.drop_from_queue(url, thread_id=self.thread_id)
             return
 
+
         anchors, anchor_values = extract_anchors(content)
         #the program has a stroke here
 
         to_be_queued = set()
+        to_be_graphed = set()
         new_count = 0
         tuples = []
         for anchor, a_v in zip(anchors, anchor_values):
@@ -84,8 +87,15 @@ class Crawl:
             if absolute_url.endswith(Config.DESIGN_FILE_EXTS):
                 continue
 
-            to_be_queued.add(absolute_url)
+            to_id = hash(absolute_url) % (10 ** 9)
+            to_be_queued.add((to_id , absolute_url))
+            to_be_graphed.add((to_id , id))
             new_count += 1
+
+
+        self.db.add_link_relation_batch(to_be_graphed)
+
+
         print(f"[TIMER] anchor extraction + tuple building: {time.perf_counter() - t2:.3f}s");
         t3 = time.perf_counter()
 
@@ -93,7 +103,7 @@ class Crawl:
         print(f"[TIMER] manage_for_index_batch: {time.perf_counter() - t3:.3f}s");
         t4 = time.perf_counter()
 
-        self.db.add_to_queue_batch(list(to_be_queued), thread_id=self.thread_id)
+        self.db.add_to_queue_batch(to_be_queued, thread_id=self.thread_id)
         print(f"[TIMER] add_to_queue_batch ({new_count} urls): {time.perf_counter() - t4:.3f}s");
         t5 = time.perf_counter()
 
@@ -101,7 +111,7 @@ class Crawl:
             print(f"  → Queued {new_count} new URLs")
 
         self.db.drop_from_queue(url, thread_id=self.thread_id)
-        self.db.add_url(url, content)
+        self.db.add_url(id, url, content)
         print(f"[TIMER] drop_from_queue + add_url: {time.perf_counter() - t5:.3f}s");
         t6 = time.perf_counter()
 
