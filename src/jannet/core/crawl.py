@@ -66,7 +66,6 @@ class Crawl:
 
 
         anchors, anchor_values = extract_anchors(content)
-        #the program has a stroke here
 
         to_be_queued = set()
         to_be_graphed = set()

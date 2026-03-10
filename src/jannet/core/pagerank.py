@@ -22,15 +22,19 @@ class PageRank:
         n = len(nodes)
         A = np.zeros((n, n))
 
+
         for from_url, to_url in pairs:
             i = idx[from_url]
             j = idx[to_url]
             A[j, i] += 1
 
+
+
         col_sums = A.sum(axis=0)
 
         M = A / np.where(col_sums == 0, 1, col_sums)
         M[:, col_sums == 0] = 1 / n
+
 
         n = M.shape[0]
         G = self.d * M + ((1 - self.d) / n) * np.ones((n, n))
@@ -40,9 +44,16 @@ class PageRank:
         for _ in range(self.max_iterations):
             r = G @ r
 
+        r /= np.max(np.abs(r),axis=0)
+
+
+        pairs = []
         for i in range(n):
-            url = self.db.get_url_by_id(nodes[i])
-            print(url, r[i])
+            id = nodes[i]
+            score = r[i]
+            pairs.append((id, score))
+
+        self.db.update_pagerank_batch(pairs)
 
 
 

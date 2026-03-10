@@ -29,6 +29,14 @@ class IndexDB:
             PRIMARY KEY (from_url_id, to_url_id)
             )''')
 
+            c.execute('''CREATE TABLE IF NOT EXISTS pagerank_scores (
+                         id INTEGER NOT NULL PRIMARY KEY,
+                         score INTEGER NOT NULL DEFAULT 0,
+                         added_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP)
+                
+            
+            ''')
+
             c.execute('''CREATE TABLE IF NOT EXISTS queue
             
                          (url VARCHAR(2048),
@@ -299,16 +307,10 @@ LIMIT %s'''
             c.execute('''SELECT to_url_id, from_url_id FROM link_graph''')
             return c.fetchall()
 
-    #remove when done testing pagerank
-    def get_url_by_id(self, id):
+    def update_pagerank_batch(self, pairs):
         with self.open_db() as conn:
             c = conn.cursor()
-
-            c.execute('SELECT url FROM urls WHERE id = %s', (id,))
-            result = c.fetchone()
-
-            if not result or result[0] is None:
-                c.execute('SELECT url FROM queue WHERE id = %s', (id,))
-                result = c.fetchone()
-
-            return result[0] if result else None
+            c.executemany(
+                '''INSERT INTO pagerank_scores (id, score) VALUES (%s, %s)''', pairs
+            )
+            conn.commit()

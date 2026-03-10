@@ -46,10 +46,19 @@ class Config:
     SLEEP_P = 0
 
     SEED_URLS = [
-        ["https://wikipedia.com/"]
+        ["https://britannica.com"],
+        ["https://wikipedia.org"],
+        ["https://scholar.google.com"],
+        ["https://semanticscholar.org"],
+        ["https://arxiv.org"],
+        ["https://wikidata.org"],
+        ["https://ourworldindata.org"],
+        ["https://wolframalpha.com"],
+        ["https://openlibrary.org"],
+        ["https://pubmed.ncbi.nlm.nih.gov"],
     ]
 
-    THREAD_COUNT = 1
+    THREAD_COUNT = 10
     assert len(SEED_URLS) == THREAD_COUNT
 
     DESIGN_FILE_EXTS = (".png", ".jpg", ".jpeg", ".ico", ".webp", ".svg", ".css", ".docx")
