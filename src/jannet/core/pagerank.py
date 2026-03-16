@@ -1,8 +1,6 @@
-import sys
-
 import numpy as np
 
-from jannet.managers.db_manager import get_db, get_vdb
+from src.jannet.managers.db_manager import get_db, get_vdb
 
 
 class PageRank:
@@ -52,6 +50,7 @@ class PageRank:
             id = nodes[i]
             score = r[i]
             pairs.append((id, score))
+
 
         self.db.update_pagerank_batch(pairs)
 

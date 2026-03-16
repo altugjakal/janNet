@@ -1,8 +1,10 @@
 from concurrent.futures import ThreadPoolExecutor
+from time import sleep
 
 from flask_cors import CORS
 
 from api.routes.similar import similar_bp
+from src.jannet.core.process.index import Index
 from src.jannet.managers.db_manager import get_db, get_vdb
 from src.jannet.utils.config import Config
 from flask import Flask
@@ -21,7 +23,7 @@ port = 5004
 _vdb = get_vdb()
 
 
-def main(thread_id):
+def crawl(thread_id):
     global _vdb
     db = get_db()
 
@@ -35,18 +37,44 @@ def main(thread_id):
 
     while crawl_count < Config.MAX_CRAWLS:
 
-        queue = db.get_queue_batch(thread_id=thread_id)
+        queue = db.get_queue_next(thread_id=thread_id)
 
 
         if len(queue) == 0:
-            print("Queue empty!")
-            break
+            print("Crawled all, sleeping...")
+            sleep(10)
+            continue
 
-        url = queue[0][0]
-        id = queue[0][1]
+        url = queue[0]
+        id = queue[1]
 
         crawler.crawl(url, id)
         crawl_count += 1
+
+def process():
+    global _vdb
+    db = get_db()
+
+    indexer = Index(db=db, vdb=_vdb)
+
+
+    while True:
+
+        queue = db.get_process_queue_next()
+        print("Next: ", queue[0])
+
+
+
+        if len(queue) == 0:
+            print("Processed all, sleeping...")
+            sleep(10)
+            continue
+
+        url = queue[0]
+        content = queue[1]
+        id = queue[2]
+
+        indexer.process(url, content, id)
 
 
 if __name__ == "__main__":
@@ -57,9 +85,11 @@ if __name__ == "__main__":
 
     args = parser.parse_args()
 
-    with ThreadPoolExecutor(max_workers=Config.THREAD_COUNT) as exe:
+    with ThreadPoolExecutor() as exe:
         for t_id in range(Config.THREAD_COUNT):
-            exe.submit(main, t_id)
+            exe.submit(crawl, t_id)
+        for _ in range(Config.PROCESS_THREAD_COUNT):
+            exe.submit(process)
 
         if not args.nogui:
 

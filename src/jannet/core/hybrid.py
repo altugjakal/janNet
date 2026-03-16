@@ -96,6 +96,8 @@ class HybridSearch:
             reverse=True
         )
 
+        #fetch the pagerank score here, then multiply it with the coefficient from the config and then combine it with the end score.
+
         for url, score in final_sorted_urls:
             final_sorted_contents[url] = all_contents[url]
 

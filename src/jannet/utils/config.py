@@ -47,18 +47,10 @@ class Config:
 
     SEED_URLS = [
         ["https://britannica.com"],
-        ["https://wikipedia.org"],
-        ["https://scholar.google.com"],
-        ["https://semanticscholar.org"],
-        ["https://arxiv.org"],
-        ["https://wikidata.org"],
-        ["https://ourworldindata.org"],
-        ["https://wolframalpha.com"],
-        ["https://openlibrary.org"],
-        ["https://pubmed.ncbi.nlm.nih.gov"],
     ]
 
-    THREAD_COUNT = 10
-    assert len(SEED_URLS) == THREAD_COUNT
+    CRAWL_THREAD_COUNT = 1
+    PROCESS_THREAD_COUNT = 1
+    assert len(SEED_URLS) == CRAWL_THREAD_COUNT
 
     DESIGN_FILE_EXTS = (".png", ".jpg", ".jpeg", ".ico", ".webp", ".svg", ".css", ".docx")

@@ -20,6 +20,7 @@ class IndexDB:
                          url VARCHAR(2048),
                         url_hash CHAR(64) AS (SHA2(url, 256)) STORED ,
                          content LONGTEXT NOT NULL,
+                         processed BOOLEAN NOT NULL DEFAULT 0,
                           crawled_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP)''')
 
             c.execute('''CREATE TABLE IF NOT EXISTS link_graph (
@@ -92,6 +93,23 @@ class IndexDB:
             c = conn.cursor()
             c.execute('''INSERT IGNORE INTO urls (id, url, content) VALUES (%s, %s, %s)''', (id, url, content))
             conn.commit()
+
+
+    def mark_url_as_processed(self, id):
+        with self.open_db() as conn:
+            c = conn.cursor()
+            c.execute(
+                '''UPDATE urls SET processed = 1 WHERE id = %s''', (id,))
+            conn.commit()
+
+    @locked
+    def get_process_queue_next(self):
+        with self.open_db() as conn:
+            c = conn.cursor()
+            c.execute('''SELECT url, content, id FROM urls WHERE processed = 0 LIMIT 1''', ())
+            return c.fetchone()
+
+
 
     @locked
     def is_url_visited(self, url):
@@ -170,13 +188,12 @@ class IndexDB:
             return c.fetchone() is not None
 
     @locked
-    def get_queue_batch(self, thread_id, limit=1000):
+    def get_queue_next(self, thread_id):
         with self.open_db() as conn:
             c = conn.cursor()
-            c.execute('''SELECT url, id FROM queue WHERE issuer_thread_id = %s ORDER BY added_at ASC LIMIT %s''',
-                      (thread_id, limit))
-            return c.fetchall()
-
+            c.execute('''SELECT url, id FROM queue WHERE issuer_thread_id = %s ORDER BY added_at ASC LIMIT 1''',
+                      (thread_id,))
+            return c.fetchone()
     @locked
     def add_domain(self, domain):
         with self.open_db() as conn:
@@ -311,6 +328,6 @@ LIMIT %s'''
         with self.open_db() as conn:
             c = conn.cursor()
             c.executemany(
-                '''INSERT INTO pagerank_scores (id, score) VALUES (%s, %s)''', pairs
+                '''INSERT IGNORE INTO pagerank_scores (id, score) VALUES (%s, %s)''', pairs
             )
             conn.commit()
