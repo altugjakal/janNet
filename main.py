@@ -12,6 +12,9 @@ from src.jannet.core.crawl import Crawl
 from api.routes.search import search_bp
 from api.routes.markup import markup_bp
 
+from huggingface_hub import login
+
+login(token=Config.HF_TOKEN)
 app = Flask(__name__)
 CORS(app)
 app.register_blueprint(search_bp, url_prefix='/search')
@@ -86,7 +89,7 @@ if __name__ == "__main__":
     args = parser.parse_args()
 
     with ThreadPoolExecutor() as exe:
-        for t_id in range(Config.THREAD_COUNT):
+        for t_id in range(Config.CRAWL_THREAD_COUNT):
             exe.submit(crawl, t_id)
         for _ in range(Config.PROCESS_THREAD_COUNT):
             exe.submit(process)

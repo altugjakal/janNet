@@ -42,6 +42,8 @@ class Config:
     LEXICAL_POOL_SIZE = 30
     SEMANTIC_POOL_SIZE = 30
 
+    HF_TOKEN = "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"
+
     SLEEP_M = 1
     SLEEP_P = 0
 

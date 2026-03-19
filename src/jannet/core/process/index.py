@@ -1,5 +1,6 @@
 import random
 import time
+import traceback
 from collections import defaultdict, Counter
 from urllib.parse import urljoin
 
@@ -59,7 +60,9 @@ class Index:
         print(f"[TIMER] manage_for_index_batch: {time.perf_counter() - t2:.3f}s")
 
         t3 = time.perf_counter()
-        self.db.add_to_queue_batch(to_be_queued, thread_id=(random.randrange(0, Config.THREAD_COUNT)))
+
+        self.db.add_to_queue_batch(to_be_queued, thread_id=(random.randrange(0, Config.CRAWL_THREAD_COUNT)))
+
         print(f"[TIMER] add_to_queue_batch ({new_count} urls): {time.perf_counter() - t3:.3f}s")
 
         if new_count > 0:

@@ -1,4 +1,6 @@
 from collections import defaultdict
+from time import time
+
 from math import log1p
 
 from src.jannet.utils.config import Config
@@ -28,7 +30,8 @@ class LexicalSearch:
         contents = {}
 
         locations = self.db.search_index(terms, limit=Config.LEXICAL_POOL_SIZE)
-        #bneck - not anymore
+
+        #bneck - something is wrong here
         kw_counts = self.db.get_total_kw_count_batch(terms)
 
         for url, keyword, content, score in locations:

@@ -1,3 +1,5 @@
+import traceback
+
 import mysql.connector
 from contextlib import contextmanager
 from src.jannet.utils.thread_lock_wrapper import locked
@@ -32,7 +34,7 @@ class IndexDB:
 
             c.execute('''CREATE TABLE IF NOT EXISTS pagerank_scores (
                          id INTEGER NOT NULL PRIMARY KEY,
-                         score INTEGER NOT NULL DEFAULT 0,
+                         score DOUBLE NOT NULL,
                          added_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP)
                 
             
@@ -68,6 +70,12 @@ class IndexDB:
             try:
                 c.execute('CREATE INDEX idx_queue_url ON queue(url)')
                 c.execute('CREATE INDEX idx_keyword ON keyword_index(keyword)')
+                c.execute('CREATE INDEX idx_keyword_url_hash ON keyword_index(url_hash)')
+                c.execute('CREATE INDEX idx_urls_url_hash ON urls(url_hash)')
+
+
+
+
 
             except mysql.connector.errors.DatabaseError:
                 pass
@@ -83,6 +91,7 @@ class IndexDB:
             yield conn
         except Exception as e:
             conn.rollback()
+            traceback.print_exc()
             raise
         finally:
             conn.close()
@@ -245,10 +254,13 @@ class IndexDB:
             contents = []
             ids = []
             placeholders = ', '.join(['%s'] * len(vector_ids))
+            if not placeholders:
+                return ids, urls, contents
             c = conn.cursor()
-            c.execute(f'''SELECT embedding_id, vector_index.url, urls.content FROM vector_index 
+            c.execute(f'''SELECT embedding_id, vector_index.url, urls.content 
+                         FROM vector_index 
                          LEFT JOIN urls ON vector_index.url_hash = urls.url_hash
-                         WHERE embedding_id IN({ placeholders })''', tuple(vector_ids))
+                         WHERE embedding_id IN ({placeholders})''', vector_ids)
             results = c.fetchall()
             for id, url, content in results:
                 ids.append(id)
@@ -284,20 +296,23 @@ class IndexDB:
         with self.open_db() as conn:
             c = conn.cursor()
             placeholders = ','.join(['%s'] * len(keywords))
-            query = f''' SELECT 
-    keyword_index.url, 
-    keyword_index.keyword, 
-    urls.content, 
-    keyword_index.score
-FROM keyword_index
-LEFT JOIN urls ON urls.url_hash = keyword_index.url_hash
-WHERE keyword_index.keyword IN ({placeholders})
-ORDER BY 
-    COUNT(*) OVER (PARTITION BY keyword_index.url) DESC,
-    keyword_index.score DESC
-LIMIT %s'''
+            query = f'''
+            
+            SELECT top.url, top.keyword, urls.content, top.total_score
+            FROM (
+                SELECT url, url_hash, keyword, SUM(score) AS total_score
+                FROM keyword_index
+                WHERE keyword IN ({placeholders})
+                GROUP BY url, url_hash, keyword
+                ORDER BY total_score DESC
+                LIMIT %s
+            ) top
+            LEFT JOIN urls ON urls.url_hash = top.url_hash
+        '''
             c.execute(query, (*keywords, limit))
-            return c.fetchall()
+
+
+            return [(url, keyword, content, float(score)) for url, keyword, content, score in c.fetchall()]
 
     @locked
     def get_content_by_url(self, url, limit):
@@ -328,6 +343,6 @@ LIMIT %s'''
         with self.open_db() as conn:
             c = conn.cursor()
             c.executemany(
-                '''INSERT IGNORE INTO pagerank_scores (id, score) VALUES (%s, %s)''', pairs
+                '''INSERT INTO pagerank_scores (id, score) VALUES (%s, %s) ''', pairs
             )
             conn.commit()
