@@ -94,7 +94,7 @@ if __name__ == "__main__":
         for _ in range(Config.PROCESS_THREAD_COUNT):
             exe.submit(process)
 
-        if not args.nogui:
+    if not args.nogui:
 
             try:
                 app.run(host=host, port=port, debug=False, use_reloader=False)
