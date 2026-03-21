@@ -346,3 +346,15 @@ class IndexDB:
                 '''INSERT INTO pagerank_scores (id, score) VALUES (%s, %s) ''', pairs
             )
             conn.commit()
+
+    def get_pagerank_scores_batch(self, urls):
+        with self.open_db() as conn:
+            c = conn.cursor()
+            c.executemany(
+                '''SELECT urls.url, pagerank_scores.score
+FROM urls
+         LEFT JOIN pagerank_scores ON pagerank_scores.id = urls.id
+WHERE urls.url = = %s''', (urls,)
+            )
+            results = [{url:score} for url, score in c.fetchall()]
+            return results

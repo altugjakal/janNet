@@ -22,7 +22,6 @@ class HybridSearch:
 
     def get_tld_rank(self, url, importance):
 
-
         domain = get_domain(url)
         tld = get_tld(domain)
         if tld in Config.EDU_TLDS:
@@ -49,6 +48,7 @@ class HybridSearch:
         sorted_contents = {}
         clean_sorted_contents = {}
 
+
         def normalize(scores):
             if not scores:
                 return {}
@@ -63,15 +63,18 @@ class HybridSearch:
 
         all_urls = set(keyword_scores.keys()) | set(vector_scores.keys())
 
+        pagerank_scores = self.db.get_pagerank_scores_batch(all_urls)
+
         combined_scores = {}
         for url in all_urls:
             kw = keyword_scores.get(url, 0)
             vec = vector_scores.get(url, 0)
+            pr = pagerank_scores.get(url, 0)
 
             if kw + vec < Config.SCORE_FILTER:
                 continue
 
-            combined_score = (kw_weight * kw + vector_weight * vec)
+            combined_score = (kw_weight * kw + vector_weight * vec) * (1 + pr)
 
             combined_scores[url] = combined_score
 
