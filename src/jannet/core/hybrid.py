@@ -72,6 +72,7 @@ class HybridSearch:
             pr = pagerank_scores.get(url, 0)
 
             if kw + vec < Config.SCORE_FILTER:
+                print(f"[hybrid] Skipping {url}")
                 continue
 
             combined_score = (kw_weight * kw + vector_weight * vec) * (1 + pr)

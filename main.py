@@ -60,8 +60,9 @@ def process():
 
     indexer = Index(db=db, vdb=_vdb)
 
+    process_count = 0
 
-    while True:
+    while process_count < Config.MAX_PROCESS:
 
         queue = db.get_process_queue_next()
         print("Next: ", queue[0])
@@ -79,6 +80,8 @@ def process():
 
         indexer.process(url, content, id)
 
+        process_count += 1
+
 
 if __name__ == "__main__":
     import argparse
@@ -94,11 +97,5 @@ if __name__ == "__main__":
         for _ in range(Config.PROCESS_THREAD_COUNT):
             exe.submit(process)
 
-    if not args.nogui:
-
-            try:
-                app.run(host=host, port=port, debug=False, use_reloader=False)
-            finally:
-                _vdb.save_to_disk()
-                print("Shutting down crawlers...")
-                exe.shutdown(wait=True)
+        if not args.nogui:
+            app.run(host=host, port=port, debug=False, use_reloader=False)

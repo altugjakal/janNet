@@ -103,7 +103,7 @@ class IndexDB:
             c.execute('''INSERT IGNORE INTO urls (id, url, content) VALUES (%s, %s, %s)''', (id, url, content))
             conn.commit()
 
-
+    @locked
     def mark_url_as_processed(self, id):
         with self.open_db() as conn:
             c = conn.cursor()
@@ -296,20 +296,24 @@ class IndexDB:
         with self.open_db() as conn:
             c = conn.cursor()
             placeholders = ','.join(['%s'] * len(keywords))
+            matched_placeholders = ','.join(['%s'] * len(keywords))
             query = f'''
-            
-            SELECT top.url, top.keyword, urls.content, top.total_score
+            SELECT top.url, ki.keyword, urls.content, top.total_score
             FROM (
-                SELECT url, url_hash, keyword, SUM(score) AS total_score
+                SELECT url, url_hash, SUM(score) AS total_score
                 FROM keyword_index
                 WHERE keyword IN ({placeholders})
-                GROUP BY url, url_hash, keyword
+                GROUP BY url, url_hash
                 ORDER BY total_score DESC
                 LIMIT %s
             ) top
             LEFT JOIN urls ON urls.url_hash = top.url_hash
+            LEFT JOIN keyword_index ki 
+                ON ki.url_hash = top.url_hash 
+                AND ki.keyword IN ({matched_placeholders}) 
+                
         '''
-            c.execute(query, (*keywords, limit))
+            c.execute(query, (*keywords, limit, *keywords))
 
 
             return [(url, keyword, content, float(score)) for url, keyword, content, score in c.fetchall()]
@@ -350,11 +354,20 @@ class IndexDB:
     def get_pagerank_scores_batch(self, urls):
         with self.open_db() as conn:
             c = conn.cursor()
-            c.executemany(
-                '''SELECT urls.url, pagerank_scores.score
-FROM urls
-         LEFT JOIN pagerank_scores ON pagerank_scores.id = urls.id
-WHERE urls.url = = %s''', (urls,)
+            placeholders = ','.join(['%s'] * len(urls))
+            s_map = {}
+
+            c.execute(
+                f'''SELECT urls.url, pagerank_scores.score
+            FROM urls
+                     LEFT JOIN pagerank_scores ON pagerank_scores.id = urls.id
+            WHERE urls.url IN ({ placeholders })''', tuple(urls)
             )
-            results = [{url:score} for url, score in c.fetchall()]
-            return results
+            results = c.fetchall()
+            print(results)
+            for url, pagerank_score in results:
+
+                s_map[url] = pagerank_score if pagerank_score else 0
+
+
+            return s_map
