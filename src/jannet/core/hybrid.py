@@ -41,13 +41,17 @@ class HybridSearch:
         v_search_instance = self.v_search_instance
         kw_search_instance = self.kw_search_instance
 
+        print("[hybrid] starting vector search")
         vector_scores, vector_content = v_search_instance.search(term)
+        print("[hybrid] vector search done")
+
+        print("[hybrid] starting keyword search")
         keyword_scores, keyword_content = kw_search_instance.search(term)
+        print("[hybrid] keyword search done")
 
         all_contents = keyword_content | vector_content
         sorted_contents = {}
         clean_sorted_contents = {}
-
 
         def normalize(scores):
             if not scores:
@@ -63,25 +67,29 @@ class HybridSearch:
 
         all_urls = set(keyword_scores.keys()) | set(vector_scores.keys())
 
-        pagerank_scores = self.db.get_pagerank_scores_batch(all_urls)
+        print("[hybrid] starting pagerank fetch")
+        if Config.PAGERANK_CALCULATION:
+            pagerank_scores = self.db.get_pagerank_scores_batch(all_urls)
+        print("[hybrid] pagerank fetch done")
 
+        print("[hybrid] starting score combination")
         combined_scores = {}
         for url in all_urls:
             kw = keyword_scores.get(url, 0)
             vec = vector_scores.get(url, 0)
-            pr = pagerank_scores.get(url, 0)
+            pr = pagerank_scores.get(url, 0) if Config.PAGERANK_CALCULATION else 0
+
 
             if kw + vec < Config.SCORE_FILTER:
                 print(f"[hybrid] Skipping {url}")
                 continue
 
             combined_score = (kw_weight * kw + vector_weight * vec) * (1 + pr)
-
             combined_scores[url] = combined_score
+        print("[hybrid] score combination done")
 
         sorted_urls = sorted(combined_scores.items(), key=lambda x: x[1], reverse=True)[:Config.FIRST_POOL_SIZE]
         for url, score in sorted_urls:
-
             try:
                 sorted_contents[url] = all_contents[url]
                 clean_sorted_contents[url] = html_to_clean(all_contents[url])
@@ -90,17 +98,16 @@ class HybridSearch:
                 print(f"Failed: {url}")
                 continue
 
+        print("[hybrid] starting maxsim")
         maxsim_scores = self.maxsim_instance.calculate(term, clean_sorted_contents)
+        print("[hybrid] maxsim done")
 
         final_sorted_contents = {}
-
         final_sorted_urls = sorted(
             maxsim_scores.items(),
             key=lambda x: self.get_tld_rank(x[0], x[1]),
             reverse=True
         )
-
-        #fetch the pagerank score here, then multiply it with the coefficient from the config and then combine it with the end score.
 
         for url, score in final_sorted_urls:
             final_sorted_contents[url] = all_contents[url]

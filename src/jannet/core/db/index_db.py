@@ -7,6 +7,7 @@ from src.jannet.utils.thread_lock_wrapper import locked
 
 class IndexDB:
     def __init__(self, host, user, password, database, port):
+
         self.config = {
             'host': host,
             'user': user,
@@ -14,6 +15,7 @@ class IndexDB:
             'database': database,
             'port': port
         }
+        self.conn = mysql.connector.connect(**self.config)
         with self.open_db() as conn:
             c = conn.cursor()
 
@@ -68,11 +70,12 @@ class IndexDB:
 
 
             try:
-                c.execute('CREATE INDEX idx_queue_url ON queue(url)')
-                c.execute('CREATE INDEX idx_keyword ON keyword_index(keyword)')
-                c.execute('CREATE INDEX idx_keyword_url_hash ON keyword_index(url_hash)')
-                c.execute('CREATE INDEX idx_urls_url_hash ON urls(url_hash)')
-
+                c.execute('CREATE INDEX idx_queue_url_hash ON queue(url_hash);')
+                c.execute('CREATE INDEX idx_keyword ON keyword_index(keyword(191));')
+                c.execute('CREATE INDEX idx_keyword_url_hash ON keyword_index(url_hash);')
+                c.execute('CREATE INDEX idx_urls_url_hash ON urls(url_hash);')
+                c.execute('CREATE INDEX idx_keyword_url ON keyword_index(keyword(191), url_hash, score);')
+                c.execute('CREATE INDEX idx_urls_url ON urls(url);')
 
 
 
@@ -86,15 +89,14 @@ class IndexDB:
 
     @contextmanager
     def open_db(self):
-        conn = mysql.connector.connect(**self.config)
+        conn = self.conn
         try:
+            conn.ping(reconnect=True)
             yield conn
         except Exception as e:
             conn.rollback()
             traceback.print_exc()
             raise
-        finally:
-            conn.close()
 
     @locked
     def add_url(self, id, url, content):
@@ -116,7 +118,8 @@ class IndexDB:
         with self.open_db() as conn:
             c = conn.cursor()
             c.execute('''SELECT url, content, id FROM urls WHERE processed = 0 LIMIT 1''', ())
-            return c.fetchone()
+            result = c.fetchone()
+            return result if result else None
 
 
 
@@ -126,6 +129,7 @@ class IndexDB:
             c = conn.cursor()
             c.execute('''SELECT url FROM urls WHERE url_hash = SHA2(%s, 256)''', (url,))
             return c.fetchone() is not None
+
 
     @locked
     def add_to_queue(self, id, url, thread_id):
@@ -202,7 +206,8 @@ class IndexDB:
             c = conn.cursor()
             c.execute('''SELECT url, id FROM queue WHERE issuer_thread_id = %s ORDER BY added_at ASC LIMIT 1''',
                       (thread_id,))
-            return c.fetchone()
+            result = c.fetchone()
+            return result if result else []
     @locked
     def add_domain(self, domain):
         with self.open_db() as conn:
@@ -297,22 +302,20 @@ class IndexDB:
             c = conn.cursor()
             placeholders = ','.join(['%s'] * len(keywords))
             matched_placeholders = ','.join(['%s'] * len(keywords))
-            query = f'''
-            SELECT top.url, ki.keyword, urls.content, top.total_score
+            query = f'''SELECT top.url, ki.keyword, urls.content, top.total_score
             FROM (
-                SELECT url, url_hash, SUM(score) AS total_score
-                FROM keyword_index
-                WHERE keyword IN ({placeholders})
-                GROUP BY url, url_hash
-                ORDER BY total_score DESC
-                LIMIT %s
-            ) top
-            LEFT JOIN urls ON urls.url_hash = top.url_hash
-            LEFT JOIN keyword_index ki 
-                ON ki.url_hash = top.url_hash 
-                AND ki.keyword IN ({matched_placeholders}) 
-                
-        '''
+                     SELECT url, url_hash, SUM(score) AS total_score,
+                            COUNT(DISTINCT keyword) as keyword_count
+                     FROM keyword_index
+                     WHERE keyword IN ({placeholders})
+                     GROUP BY url, url_hash
+                     ORDER BY keyword_count DESC, total_score DESC
+                     LIMIT %s
+                 ) top
+                     LEFT JOIN urls ON urls.url_hash = top.url_hash
+                     LEFT JOIN keyword_index ki
+                               ON ki.url_hash = top.url_hash
+                                   AND ki.keyword IN ({matched_placeholders})'''
             c.execute(query, (*keywords, limit, *keywords))
 
 
@@ -355,15 +358,19 @@ class IndexDB:
         with self.open_db() as conn:
             c = conn.cursor()
             placeholders = ','.join(['%s'] * len(urls))
-            s_map = {}
+            s_map = {url: 0 for url in urls}
 
-            c.execute(
-                f'''SELECT urls.url, pagerank_scores.score
-            FROM urls
-                     LEFT JOIN pagerank_scores ON pagerank_scores.id = urls.id
-            WHERE urls.url IN ({ placeholders })''', tuple(urls)
-            )
-            results = c.fetchall()
+            try:
+                c.execute(
+                    f'''SELECT urls.url, pagerank_scores.score
+                FROM urls
+                         LEFT JOIN pagerank_scores ON pagerank_scores.id = urls.id
+                WHERE urls.url IN ({ placeholders })''', tuple(urls)
+                )
+
+                results = c.fetchall()
+            except Exception as e:
+                traceback.print_exc()
             print(results)
             for url, pagerank_score in results:
 

@@ -22,7 +22,6 @@ class VectorDB:
             self.base_index = faiss.IndexFlatL2(dimension)
             self.index = faiss.IndexIDMap2(self.base_index)
 
-# gotta handle multiple passages here, id is not the unique identifier here
     @locked
     def insert(self, text, id):
         vector = self.vectorise_text(text)

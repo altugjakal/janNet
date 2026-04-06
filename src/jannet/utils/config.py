@@ -43,13 +43,15 @@ class Config:
     LEXICAL_POOL_SIZE = 30
     SEMANTIC_POOL_SIZE = 30
 
-    HF_TOKEN = "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"
+    PAGERANK_CALCULATION= False
 
-    SLEEP_M = 1
+    HF_TOKEN = "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"
+
+    SLEEP_M = 0
     SLEEP_P = 0
 
     SEED_URLS = [
-        ["https://britannica.com"],
+        ["http://localhost:8000"],
     ]
 
     CRAWL_THREAD_COUNT = 1
