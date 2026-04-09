@@ -56,10 +56,11 @@ class IndexDB:
 
             c.execute('''CREATE TABLE IF NOT EXISTS keyword_index
                          (keyword VARCHAR(512),
+                         docId INTEGER NOT NULL,
                           url VARCHAR(2048),
                           url_hash CHAR(64) AS (SHA2(url, 256)) STORED,
                           score INTEGER NOT NULL DEFAULT 0,
-                          PRIMARY KEY (keyword, url_hash))''')
+                          PRIMARY KEY (keyword, url_hash, docId))''')
 
             c.execute('''CREATE TABLE IF NOT EXISTS vector_index (
                 id INTEGER AUTO_INCREMENT PRIMARY KEY,
@@ -93,7 +94,7 @@ class IndexDB:
         try:
             conn.ping(reconnect=True)
             yield conn
-        except Exception as e:
+        except mysql.connector.Error as e:
             conn.rollback()
             traceback.print_exc()
             raise
@@ -275,13 +276,13 @@ class IndexDB:
             return ids, urls, contents
 
     @locked
-    def manage_for_index(self, url, pairs):
+    def manage_for_index(self, url, tuples):
         with self.open_db() as conn:
             c = conn.cursor()
             c.executemany(
-                '''INSERT INTO keyword_index (url, keyword, score) VALUES (%s, %s, %s)
+                '''INSERT INTO keyword_index (url, docId, keyword, score) VALUES (%s, %s, %s, %s)
                    ON DUPLICATE KEY UPDATE score = score + VALUES(score)''',
-                [(url, keyword, score) for keyword, score in pairs.items()]
+                [(url, id, keyword, score) for keyword, id, score in tuples]
             )
             conn.commit()
 
@@ -290,7 +291,7 @@ class IndexDB:
         with self.open_db() as conn:
             c = conn.cursor()
             c.executemany(
-                '''INSERT INTO keyword_index (url, keyword, score) VALUES (%s, %s, %s)
+                '''INSERT INTO keyword_index (url, docId, keyword, score) VALUES (%s, %s, %s, %s)
                    ON DUPLICATE KEY UPDATE score = score + VALUES(score)''',
                 tuples
             )

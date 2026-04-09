@@ -35,10 +35,11 @@ class Index:
             absolute_url = urljoin(url, anchor)
             absolute_url = absolute_url.rstrip("/")
             absolute_url = absolute_url.split("#")[0]
+            new_url_id = hash(absolute_url) % (10 ** 9)
 
             for value in extract_words(a_v):
-                tuples.append((absolute_url, value, Config.HTML_IMPORTANCE_MAP.get("h1")))
-                tuples.append((url, value, Config.HTML_IMPORTANCE_MAP.get("p")))
+                tuples.append((absolute_url, new_url_id, value, Config.HTML_IMPORTANCE_MAP.get("h1")))
+                tuples.append((url, id, value, Config.HTML_IMPORTANCE_MAP.get("p")))
 
             if not absolute_url.startswith(("http://", "https://")):
                 continue
@@ -46,18 +47,13 @@ class Index:
             if absolute_url.endswith(Config.DESIGN_FILE_EXTS):
                 continue
 
-            to_id = hash(absolute_url) % (10 ** 9)
-            to_be_queued.add((to_id, absolute_url))
-            to_be_graphed.add((to_id, id))
+            to_be_queued.add((new_url_id, absolute_url))
+            to_be_graphed.add((id, new_url_id))
             new_count += 1
 
         t1 = time.perf_counter()
         self.db.add_link_relation_batch(to_be_graphed)
         print(f"[TIMER] add_link_relation_batch: {time.perf_counter() - t1:.3f}s")
-
-        t2 = time.perf_counter()
-        self.db.manage_for_index_batch(tuples)
-        print(f"[TIMER] manage_for_index_batch: {time.perf_counter() - t2:.3f}s")
 
         t3 = time.perf_counter()
 
@@ -84,7 +80,6 @@ class Index:
             (page_contents.description, "description")
         ]
 
-        keyword_pairs = defaultdict(float)
         t5 = time.perf_counter()
         clean_content = html_to_clean(content)
         print(f"[TIMER] html_to_clean: {time.perf_counter() - t5:.3f}s")
@@ -93,6 +88,7 @@ class Index:
         word_freq = Counter(clean_lower.split())
 
         t6 = time.perf_counter()
+
         for text_items, element_type in text_list:
             importance = self.assign_importance_by_location(element_type)
             for text in text_items:
@@ -101,8 +97,12 @@ class Index:
                     tf = 1 + log1p(word_freq.get(word.lower(), 0))
                     tf = 1 + log1p(tf)
                     tf_capped = min(tf, 3)
-                    keyword_pairs[word] += importance * tf_capped
+                    tuples.append((url, id, word, importance * tf_capped))
         print(f"[TIMER] keyword_pairs building: {time.perf_counter() - t6:.3f}s")
+
+        t2 = time.perf_counter()
+        self.db.manage_for_index_batch(tuples)
+        print(f"[TIMER] manage_for_index_batch: {time.perf_counter() - t2:.3f}s")
 
         words = clean_content.split()
         url_emb_pairs = set()
@@ -119,7 +119,7 @@ class Index:
         print(f"[TIMER] manage_vector_for_index_batch: {time.perf_counter() - t8:.3f}s")
 
         t9 = time.perf_counter()
-        self.db.manage_for_index(url=url, pairs=keyword_pairs)
+        self.db.manage_for_index_batch(tuples=tuples)
         print(f"[TIMER] manage_for_index: {time.perf_counter() - t9:.3f}s")
 
         print(f"[TIMER] TOTAL process: {time.perf_counter() - t0:.3f}s")

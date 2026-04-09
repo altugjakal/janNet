@@ -72,7 +72,6 @@ def process():
     while process_count < Config.MAX_PROCESS:
         try:
             queue = db.get_process_queue_next()
-            print(queue)
 
             if not queue:
                 print("Processed all, sleeping...")

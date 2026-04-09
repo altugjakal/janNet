@@ -24,8 +24,7 @@ class Crawl:
     def crawl(self, url, id):
         sleep_median = self.sleep_median
         sleep_padding = self.sleep_padding
-
-
+        print(id)
 
         domain = get_domain(url)
 
