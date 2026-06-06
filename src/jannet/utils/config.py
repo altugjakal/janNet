@@ -16,6 +16,8 @@ class Config:
     RETURN_LIMIT = 100
     SCORE_FILTER = 0.000
 
+    CORNET_URL = 'http://localhost:7777'
+
     FIRST_POOL_SIZE = 10
 
     DB_PASSWORD = 'AVNS_hZabM_xFW7WDqJyALT8'

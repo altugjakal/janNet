@@ -20,6 +20,8 @@ class Index:
         base_importance = Config.HTML_IMPORTANCE_MAP.get(element_type, 1)
         return base_importance
 
+
+
     def process(self, url, content, id):
 
         self.db.mark_url_as_processed(id)
@@ -98,9 +100,12 @@ class Index:
                     tf = 1 + log1p(tf)
                     tf_capped = min(tf, 3)
                     tuples.append((url, id, word, importance * tf_capped))
+
         print(f"[TIMER] keyword_pairs building: {time.perf_counter() - t6:.3f}s")
 
         t2 = time.perf_counter()
+        
+        #here instead of inserting with manage_for_index, use your index up there per html item
         self.db.manage_for_index_batch(tuples)
         print(f"[TIMER] manage_for_index_batch: {time.perf_counter() - t2:.3f}s")
 

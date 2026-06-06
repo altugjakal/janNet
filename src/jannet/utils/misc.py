@@ -21,7 +21,7 @@ def extract_words(text):
     return filtered_words
 
 
-def make_request(url):
+def make_getr(url):
     url = url.strip()
     headers = {
         "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
@@ -41,11 +41,29 @@ def make_request(url):
         print(f"Request failed for {url}")
         raise
 
+def make_postr(url, json):
+    url = url.strip()
+    headers = {
+        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+        "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
+        "Accept-Language": "en-US,en;q=0.5",
+    }
+
+    try:
+        response = requests.post(url, json, headers=headers, timeout=15, allow_redirects=True)
+        return response
+
+    except requests.RequestException as e:
+        print(f"Request failed for {url}")
+        raise
+
+
+
 
 def site_details(url=None, content=None):  #extract details from the given content, if given
     if content is None and url is not None:
         try:
-            response = make_request(url)
+            response = make_getr(url)
             content = response.text
 
         except requests.RequestException as e:

@@ -6,7 +6,7 @@ from protego import Protego
 from src.jannet.utils.config import Config
 from src.jannet.managers.db_manager import get_db, get_vdb
 from src.jannet.utils.parsing import extract_anchors, html_to_clean, get_url_root, reformat_html_tags, get_domain
-from src.jannet.utils.misc import extract_words, make_request
+from src.jannet.utils.misc import extract_words, make_getr
 from urllib.parse import urljoin
 
 from src.jannet.utils.timer_wrapper import timed
@@ -44,7 +44,7 @@ class Crawl:
             try:
 
                 r_url = get_url_root(url) + "/robots.txt"
-                response = make_request(r_url)
+                response = make_getr(r_url)
                 rp = Protego.parse(response.text)
                 can_fetch = rp.can_fetch(Config.USER_AGENT, url)
                 delay = rp.crawl_delay(Config.USER_AGENT)
@@ -68,7 +68,7 @@ class Crawl:
 
 
         try:
-            content = make_request(url).text
+            content = make_getr(url).text
             print(f"[Thread {self.thread_id}] 200 OK: {url}")
         except Exception as e:
             print(f"[Thread {self.thread_id}] Crawl failed for {url}: {e}")
