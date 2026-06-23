@@ -16,7 +16,7 @@ class Config:
     RETURN_LIMIT = 100
     SCORE_FILTER = 0.000
 
-    CORNET_URL = 'http://localhost:7777'
+    CORNET_URL = 'http://localhost:7777/'
 
     FIRST_POOL_SIZE = 10
 
@@ -47,13 +47,13 @@ class Config:
 
     PAGERANK_CALCULATION= False
 
-    HF_TOKEN = "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"
+    HF_TOKEN = "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"
 
     SLEEP_M = 0
     SLEEP_P = 0
 
     SEED_URLS = [
-        ["http://localhost:8000"],
+        ["https://en.wikipedia.org/wiki/Siege_of_Hennebont"],
     ]
 
     CRAWL_THREAD_COUNT = 1

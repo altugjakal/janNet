@@ -2,7 +2,7 @@ from src.jannet.utils.config import Config
 from src.jannet.utils.misc import make_postr, make_getr
 
 
-class ReverseIndex:
+class ReverseIndexCommunicator:
     def __init__(self):
         self.index_url = Config.CORNET_URL
 

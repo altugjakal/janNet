@@ -1,11 +1,8 @@
 import random
 import time
-import traceback
-from collections import defaultdict, Counter
 from urllib.parse import urljoin
 
-from math import log1p
-
+from src.jannet.core.process.reverse_index import ReverseIndexCommunicator
 from src.jannet.utils.config import Config
 from src.jannet.utils.misc import extract_words
 from src.jannet.utils.parsing import extract_anchors, reformat_html_tags, html_to_clean
@@ -15,6 +12,7 @@ class Index:
     def __init__(self, db, vdb):
         self.db = db
         self.vdb = vdb
+        self.ri_client = ReverseIndexCommunicator()
 
     def assign_importance_by_location(self, element_type):
         base_importance = Config.HTML_IMPORTANCE_MAP.get(element_type, 1)
@@ -29,10 +27,10 @@ class Index:
 
         anchors, anchor_values = extract_anchors(content)
 
+
         to_be_queued = set()
         to_be_graphed = set()
         new_count = 0
-        tuples = []
         for anchor, a_v in zip(anchors, anchor_values):
             absolute_url = urljoin(url, anchor)
             absolute_url = absolute_url.rstrip("/")
@@ -40,8 +38,11 @@ class Index:
             new_url_id = hash(absolute_url) % (10 ** 9)
 
             for value in extract_words(a_v):
-                tuples.append((absolute_url, new_url_id, value, Config.HTML_IMPORTANCE_MAP.get("h1")))
-                tuples.append((url, id, value, Config.HTML_IMPORTANCE_MAP.get("p")))
+                self.ri_client.insert(new_url_id, value, Config.HTML_IMPORTANCE_MAP.get("h1"))
+                self.ri_client.insert(id, value, Config.HTML_IMPORTANCE_MAP.get("p"))
+
+
+
 
             if not absolute_url.startswith(("http://", "https://")):
                 continue
@@ -86,8 +87,7 @@ class Index:
         clean_content = html_to_clean(content)
         print(f"[TIMER] html_to_clean: {time.perf_counter() - t5:.3f}s")
 
-        clean_lower = clean_content.lower()
-        word_freq = Counter(clean_lower.split())
+
 
         t6 = time.perf_counter()
 
@@ -95,18 +95,17 @@ class Index:
             importance = self.assign_importance_by_location(element_type)
             for text in text_items:
                 words = extract_words(text)
-                for word in words:
-                    tf = 1 + log1p(word_freq.get(word.lower(), 0))
-                    tf = 1 + log1p(tf)
-                    tf_capped = min(tf, 3)
-                    tuples.append((url, id, word, importance * tf_capped))
+                concat_words = " ".join(words)
+                self.ri_client.insert(id, concat_words, importance)
+
+
+
 
         print(f"[TIMER] keyword_pairs building: {time.perf_counter() - t6:.3f}s")
 
         t2 = time.perf_counter()
         
-        #here instead of inserting with manage_for_index, use your index up there per html item
-        self.db.manage_for_index_batch(tuples)
+        #here instead of inserting with manage_for_index, use your index up there per html item - d
         print(f"[TIMER] manage_for_index_batch: {time.perf_counter() - t2:.3f}s")
 
         words = clean_content.split()
@@ -124,7 +123,6 @@ class Index:
         print(f"[TIMER] manage_vector_for_index_batch: {time.perf_counter() - t8:.3f}s")
 
         t9 = time.perf_counter()
-        self.db.manage_for_index_batch(tuples=tuples)
         print(f"[TIMER] manage_for_index: {time.perf_counter() - t9:.3f}s")
 
         print(f"[TIMER] TOTAL process: {time.perf_counter() - t0:.3f}s")

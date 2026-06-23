@@ -119,7 +119,9 @@ class IndexDB:
         with self.open_db() as conn:
             c = conn.cursor()
             c.execute('''SELECT url, content, id FROM urls WHERE processed = 0 LIMIT 1''', ())
+
             result = c.fetchone()
+            conn.commit()
             return result if result else None
 
 
@@ -207,7 +209,9 @@ class IndexDB:
             c = conn.cursor()
             c.execute('''SELECT url, id FROM queue WHERE issuer_thread_id = %s ORDER BY added_at ASC LIMIT 1''',
                       (thread_id,))
+
             result = c.fetchone()
+            conn.commit()
             return result if result else []
     @locked
     def add_domain(self, domain):
@@ -379,3 +383,27 @@ class IndexDB:
 
 
             return s_map
+
+    @locked
+    def destroy_all_data(self):
+
+        tables = [
+            "vector_index",
+            "keyword_index",
+            "domains",
+            "queue",
+            "pagerank_scores",
+            "link_graph",
+            "urls"
+        ]
+
+        with self.open_db() as conn:
+            c = conn.cursor()
+
+            c.execute("SET FOREIGN_KEY_CHECKS = 0;")
+
+            for table in tables:
+                c.execute(f"DROP TABLE IF EXISTS {table};")
+
+            c.execute("SET FOREIGN_KEY_CHECKS = 1;")
+            conn.commit()

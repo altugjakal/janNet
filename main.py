@@ -6,6 +6,7 @@ from flask_cors import CORS
 
 from api.routes.similar import similar_bp
 from src.jannet.core.process.index import Index
+from src.jannet.core.process.reverse_index import ReverseIndexCommunicator
 from src.jannet.core.process.robots_cache import RobotsCache
 from src.jannet.managers.db_manager import get_db, get_vdb
 from src.jannet.utils.config import Config
@@ -33,7 +34,8 @@ def crawl(thread_id):
     global _vdb, _rc
     db = get_db()
 
-    crawler = Crawl(sleep_median=Config.SLEEP_M, sleep_padding=Config.SLEEP_P, db=db, vdb=_vdb, rc=_rc,thread_id=thread_id)
+    crawler = Crawl(sleep_median=Config.SLEEP_M, sleep_padding=Config.SLEEP_P, db=db, vdb=_vdb, rc=_rc,
+                    thread_id=thread_id)
 
     if db.get_queue_size(thread_id=thread_id) == 0:
         db.add_to_queue_batch([(hash(url) % (10 ** 9), url) for url in Config.SEED_URLS[thread_id]], thread_id)
@@ -64,6 +66,7 @@ def crawl(thread_id):
 def process():
     global _vdb
     db = get_db()
+    ri_client = ReverseIndexCommunicator()
 
     indexer = Index(db=db, vdb=_vdb)
 
@@ -93,6 +96,7 @@ def process():
             sleep(5)
 
     _vdb.save_to_disk()
+    ri_client.commit()
 
 
 if __name__ == "__main__":
@@ -108,7 +112,7 @@ if __name__ == "__main__":
         for t_id in range(Config.CRAWL_THREAD_COUNT):
             futures.append(exe.submit(crawl, t_id))
         for _ in range(Config.PROCESS_THREAD_COUNT):
-            futures.append(exe.submit(process))
+            futures. end(exe.submit(process))
 
         if not args.nogui:
             app.run(host=host, port=port, debug=False, use_reloader=False)
