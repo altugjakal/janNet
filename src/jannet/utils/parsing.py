@@ -26,9 +26,11 @@ def reformat_html_tags(html_content):
     if t:
         title.append(t.strip())
 
-    title += tree.xpath("//meta[translate(@property,'ABCDEFGHIJKLMNOPQRSTUVWXYZ','abcdefghijklmnopqrstuvwxyz')='og:title']/@content")
+    title += tree.xpath(
+        "//meta[translate(@property,'ABCDEFGHIJKLMNOPQRSTUVWXYZ','abcdefghijklmnopqrstuvwxyz')='og:title']/@content")
 
-    title += tree.xpath("//meta[translate(@name,'ABCDEFGHIJKLMNOPQRSTUVWXYZ','abcdefghijklmnopqrstuvwxyz')='twitter:title']/@content")
+    title += tree.xpath(
+        "//meta[translate(@name,'ABCDEFGHIJKLMNOPQRSTUVWXYZ','abcdefghijklmnopqrstuvwxyz')='twitter:title']/@content")
 
     headings = []
     for level in range(1, 7):
@@ -87,7 +89,7 @@ def reformat_html_tags(html_content):
 
 
 def html_to_clean(html):
-    #god i hate this, fuck
+    # god, I hate this, fuck
 
     html = re.sub(r'<!--.*?-->', '', html, flags=re.DOTALL)
 
@@ -118,10 +120,8 @@ def html_to_clean(html):
 def extract_anchors(html_content):
     tree = html.fromstring(html_content)
 
-
     if tree:
         anchors = tree.xpath("//a")
-
 
     links = []
     values = []
@@ -131,7 +131,6 @@ def extract_anchors(html_content):
         if href and text:
             links.append(href)
             values.append(text)
-
 
     return links, values
 

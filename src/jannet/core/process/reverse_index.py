@@ -6,12 +6,22 @@ class ReverseIndexCommunicator:
     def __init__(self):
         self.index_url = Config.CORNET_URL
 
-    def insert(self, docId, text, base_score):
+
+    def insert(self, docId, token_map):
         full_url = self.index_url + 'insert'
+
+        structured_map = {
+            token: {
+                "weight": values[0],
+                "position": values[1]
+
+            } for token, values in token_map.items()
+        }
+
+
         json = {
         "docId": docId,
-        "text": text,
-        "score": base_score,
+        "pairs": structured_map,
         }
 
         make_postr(full_url, json)

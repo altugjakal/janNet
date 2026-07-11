@@ -2,6 +2,7 @@ from collections import defaultdict
 from time import time
 from math import log1p
 
+from src.jannet.core.process.reverse_index import ReverseIndexCommunicator
 from src.jannet.utils.config import Config
 from src.jannet.utils.misc import extract_words
 from src.jannet.utils.timer_wrapper import timed
@@ -10,6 +11,7 @@ from src.jannet.utils.timer_wrapper import timed
 class LexicalSearch:
     def __init__(self, db):
         self.db = db
+        self.ri_client = ReverseIndexCommunicator()
 
     def assign_importance_by_idf(self, keyword, total_url_count, kw_count):
         idf = log1p(total_url_count / max(1, kw_count)) + 1

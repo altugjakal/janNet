@@ -2,6 +2,8 @@ import random
 import time
 from urllib.parse import urljoin
 
+from lxml import etree
+
 from src.jannet.core.process.reverse_index import ReverseIndexCommunicator
 from src.jannet.utils.config import Config
 from src.jannet.utils.misc import extract_words
@@ -15,7 +17,7 @@ class Index:
         self.ri_client = ReverseIndexCommunicator()
 
     def assign_importance_by_location(self, element_type):
-        base_importance = Config.HTML_IMPORTANCE_MAP.get(element_type, 1)
+        base_importance = Config.HTML_IMPORTANCE_MAP.get(element_type, Config.HTML_DEFAULT_WEIGHT)
         return base_importance
 
 
@@ -40,6 +42,7 @@ class Index:
             for value in extract_words(a_v):
                 self.ri_client.insert(new_url_id, value, Config.HTML_IMPORTANCE_MAP.get("h1"))
                 self.ri_client.insert(id, value, Config.HTML_IMPORTANCE_MAP.get("p"))
+                #store anchors somewhere else  in the index
 
 
 
@@ -68,20 +71,28 @@ class Index:
             print(f"  → Queued {new_count} new URLs")
 
         t4 = time.perf_counter()
-        page_contents = reformat_html_tags(content)
+
+
+
+        root = etree.fromstring(content)
+        tree = etree.ElementTree(root)
+
+        token_map = {}
+        pos_length = 0
+
+        for i, e in enumerate(tree.iter()):
+            importance = self.assign_importance_by_location(e.tag)
+            for j, token in enumerate(e.text.split(" ")):
+                hit = (importance, pos_length+j)
+                token_map[token] = hit
+
+            pos_length += len(e.text.split(" "))
+
+        self.ri_client.insert(id, token_map)
+
         print(f"[TIMER] reformat_html_tags: {time.perf_counter() - t4:.3f}s")
 
-        text_list = [
-            (page_contents.title, "title"),
-            (page_contents.headings[0], "h1"),
-            (page_contents.headings[1], "h2"),
-            (page_contents.headings[2], "h3"),
-            (page_contents.headings[3], "h4"),
-            (page_contents.headings[4], "h5"),
-            (page_contents.headings[5], "h6"),
-            (page_contents.paragraphs, "p"),
-            (page_contents.description, "description")
-        ]
+
 
         t5 = time.perf_counter()
         clean_content = html_to_clean(content)
@@ -91,12 +102,8 @@ class Index:
 
         t6 = time.perf_counter()
 
-        for text_items, element_type in text_list:
-            importance = self.assign_importance_by_location(element_type)
-            for text in text_items:
-                words = extract_words(text)
-                concat_words = " ".join(words)
-                self.ri_client.insert(id, concat_words, importance)
+
+
 
 
 

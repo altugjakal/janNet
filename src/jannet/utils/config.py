@@ -42,6 +42,8 @@ class Config:
         "param": 3
     }
 
+    HTML_DEFAULT_WEIGHT = 1
+
     LEXICAL_POOL_SIZE = 30
     SEMANTIC_POOL_SIZE = 30
 
