@@ -11,8 +11,8 @@ class Config:
     AUTHORITIVE_MULT = 1.0
     GENERIC_MULT = 0.7
     EDU_MULT = 2.0
-    MAX_CRAWLS = 10000
-    MAX_PROCESS = 10000
+    MAX_CRAWLS = 5
+    MAX_PROCESS = 5
     RETURN_LIMIT = 100
     SCORE_FILTER = 0.000
 
@@ -49,7 +49,7 @@ class Config:
 
     PAGERANK_CALCULATION= False
 
-    HF_TOKEN = "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"
+    HF_TOKEN = "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"
 
     SLEEP_M = 0
     SLEEP_P = 0

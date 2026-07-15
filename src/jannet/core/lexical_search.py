@@ -1,3 +1,4 @@
+import math
 from collections import defaultdict
 from time import time
 from math import log1p
@@ -13,43 +14,75 @@ class LexicalSearch:
         self.db = db
         self.ri_client = ReverseIndexCommunicator()
 
-    def assign_importance_by_idf(self, keyword, total_url_count, kw_count):
-        idf = log1p(total_url_count / max(1, kw_count)) + 1
-        phrase_bonus = len(keyword.split()) * 0.5
-        base_importance = idf * (1 + phrase_bonus)
-        return base_importance
-
+    #optimize tomorrow, plus maybe have lexical pool size included
     @timed
     def search(self, term):
-        t0 = time()
+
+        def dot_product(a, b):
+            return sum(x * y for x, y in zip(a, b))
+
+        def cosine_similarity(a, a_length, b, b_length):
+            top = dot_product(a, b)
+            bottom = a_length * b_length
+            return top / bottom
 
         terms = extract_words(term)
-        print(f"[lexical] extract_words:           {(time()-t0)*1000:.1f}ms | terms={terms}")
 
-        t1 = time()
-        url_temp_scores = defaultdict(int)
+        results = self.ri_client.search(terms)
         total_url_count = self.db.get_total_url_count()
-        print(f"[lexical] get_total_url_count:     {(time()-t1)*1000:.1f}ms | count={total_url_count}")
 
-        contents = {}
+        print(results)
 
-        t2 = time()
-        locations = self.db.search_index(terms, limit=Config.LEXICAL_POOL_SIZE)
-        print(f"[lexical] search_index:            {(time()-t2)*1000:.1f}ms | results={len(locations)}")
+        doc_ids = [
+            item["docId"]
+            for result in results
+            for item in result["postingItems"]
+        ]
+        contents = self.db.get_contents_by_ids(doc_ids)
 
-        t3 = time()
-        kw_counts = self.db.get_total_kw_count_batch(terms)
-        print(f"[lexical] get_total_kw_count_batch:{(time()-t3)*1000:.1f}ms | kw_counts={kw_counts}")
+        id_scores = {}
 
-        t4 = time()
-        for url, keyword, content, score in locations:
-            if content:
-                contents[url] = content
-                for search_term in terms:
-                    importance = self.assign_importance_by_idf(keyword, total_url_count, kw_counts[search_term])
-                    url_temp_scores[url] += importance * score
-        print(f"[lexical] scoring loop:            {(time()-t4)*1000:.1f}ms | urls_scored={len(url_temp_scores)}")
+        vectors = defaultdict(lambda: [0.0] * len(set(terms)))
+        term_vector = [0.0] * len(set(terms))
 
-        print(f"[lexical] TOTAL search():          {(time()-t0)*1000:.1f}ms")
+        for i, result in enumerate(results):
+            df = len(result["postingItems"])
+            idf = log1p((total_url_count + 1) / (df + 1)) + 1
 
-        return url_temp_scores, contents
+            term_tf = terms.count(result["token"]) / len(terms)
+            term_tfidf = term_tf * idf
+            term_vector[i] = term_tfidf
+
+            for posting in result["postingItems"]:
+                doc_length = len(contents[posting["docId"]].split())
+
+                #here, account for hit weights
+                tf = len(posting["hits"]) / doc_length
+                tfidf = tf * idf
+
+                vectors[posting["docId"]][i] = tfidf
+
+        query_length = math.sqrt(len(terms))
+
+        for doc_id, doc_vector in vectors.items():
+            content = contents.get(doc_id)
+            if not content:
+                continue
+
+            doc_length_raw = len(content.split())
+
+            if doc_length_raw > 0 and query_length > 0:
+
+                doc_length_norm = math.sqrt(doc_length_raw)
+
+                score = cosine_similarity(term_vector, query_length, doc_vector, doc_length_norm)
+                if score > 0:
+                    id_scores[doc_id] = score
+
+                    #return url score mappings not id score, the other end expects URLs for final result display
+
+        map_over_ids = self.db.get_url_from_ids(id_scores.keys())
+
+        url_scores = {url: id_scores[id] for id, url in map_over_ids if id in id_scores}
+
+        return url_scores, contents

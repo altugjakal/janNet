@@ -35,26 +35,28 @@ def make_getr(url):
 
     try:
         response = requests.get(url, headers=headers, timeout=15, allow_redirects=True)
+        response.raise_for_status()
         return response
 
     except requests.RequestException as e:
-        print(f"Request failed for {url}")
+        print(f"Request failed for {url}: {e}")
         raise
 
 def make_postr(url, json):
     url = url.strip()
     headers = {
         "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
-        "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
+        "Accept": "application/json, text/plain, */*", # Updated to match your JSON data context
         "Accept-Language": "en-US,en;q=0.5",
     }
 
     try:
-        response = requests.post(url, json, headers=headers, timeout=15, allow_redirects=True)
+        response = requests.post(url, json=json, headers=headers, timeout=15, allow_redirects=True)
+        response.raise_for_status()
         return response
 
     except requests.RequestException as e:
-        print(f"Request failed for {url}")
+        print(f"Request failed for {url}: {e}")
         raise
 
 

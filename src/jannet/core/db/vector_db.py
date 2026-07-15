@@ -1,3 +1,6 @@
+import os
+import traceback
+
 import torch
 
 from src.jannet.managers.model_manager import get_model
@@ -84,4 +87,8 @@ class VectorDB:
         return token_embeddings
 
     def save_to_disk(self):
-        faiss.write_index(self.index, "index/index.index")
+        current_dir = os.path.dirname(os.path.abspath(__file__))
+
+        index_path = os.path.normpath(os.path.join(current_dir, "..", "..", "index", "index.index"))
+
+        faiss.write_index(self.index, index_path)

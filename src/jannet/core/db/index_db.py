@@ -54,13 +54,7 @@ class IndexDB:
                          (domain VARCHAR(512) PRIMARY KEY,
                           added_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP)''')
 
-            c.execute('''CREATE TABLE IF NOT EXISTS keyword_index
-                         (keyword VARCHAR(512),
-                         docId INTEGER NOT NULL,
-                          url VARCHAR(2048),
-                          url_hash CHAR(64) AS (SHA2(url, 256)) STORED,
-                          score INTEGER NOT NULL DEFAULT 0,
-                          PRIMARY KEY (keyword, url_hash, docId))''')
+
 
             c.execute('''CREATE TABLE IF NOT EXISTS vector_index (
                 id INTEGER AUTO_INCREMENT PRIMARY KEY,
@@ -72,10 +66,9 @@ class IndexDB:
 
             try:
                 c.execute('CREATE INDEX idx_queue_url_hash ON queue(url_hash);')
-                c.execute('CREATE INDEX idx_keyword ON keyword_index(keyword(191));')
-                c.execute('CREATE INDEX idx_keyword_url_hash ON keyword_index(url_hash);')
+
                 c.execute('CREATE INDEX idx_urls_url_hash ON urls(url_hash);')
-                c.execute('CREATE INDEX idx_keyword_url ON keyword_index(keyword(191), url_hash, score);')
+
                 c.execute('CREATE INDEX idx_urls_url ON urls(url);')
 
 
@@ -151,29 +144,8 @@ class IndexDB:
             )
             conn.commit()
 
-    @locked
-    def get_total_kw_count(self, keyword):
-        with self.open_db() as conn:
-            c = conn.cursor()
-            c.execute('''SELECT COUNT(*) FROM keyword_index WHERE keyword = %s''', (keyword,))
-            return c.fetchone()[0]
 
-    @locked
-    def get_total_kw_count_batch(self, keywords):
-        with self.open_db() as conn:
-            r_map = {}
-            placeholders = ', '.join(['%s'] * len(keywords))
-            c = conn.cursor()
-            c.execute(
-                f'''SELECT COUNT(*), keyword FROM keyword_index WHERE keyword IN ({ placeholders }) GROUP BY keyword''', tuple(keywords))
-            results = c.fetchall()
-            for keyword in keywords:
-                r_map[keyword] = 0
 
-            for count, keyword in results:
-                r_map[keyword] = count
-
-        return r_map
 
     @locked
     def get_total_url_count(self):
@@ -279,52 +251,10 @@ class IndexDB:
 
             return ids, urls, contents
 
-    @locked
-    def manage_for_index(self, url, tuples):
-        with self.open_db() as conn:
-            c = conn.cursor()
-            c.executemany(
-                '''INSERT INTO keyword_index (url, docId, keyword, score) VALUES (%s, %s, %s, %s)
-                   ON DUPLICATE KEY UPDATE score = score + VALUES(score)''',
-                [(url, id, keyword, score) for keyword, id, score in tuples]
-            )
-            conn.commit()
-
-    @locked
-    def manage_for_index_batch(self, tuples):
-        with self.open_db() as conn:
-            c = conn.cursor()
-            c.executemany(
-                '''INSERT INTO keyword_index (url, docId, keyword, score) VALUES (%s, %s, %s, %s)
-                   ON DUPLICATE KEY UPDATE score = score + VALUES(score)''',
-                tuples
-            )
-            conn.commit()
-
-    @locked
-    def search_index(self, keywords, limit):
-        with self.open_db() as conn:
-            c = conn.cursor()
-            placeholders = ','.join(['%s'] * len(keywords))
-            matched_placeholders = ','.join(['%s'] * len(keywords))
-            query = f'''SELECT top.url, ki.keyword, urls.content, top.total_score
-            FROM (
-                     SELECT url, url_hash, SUM(score) AS total_score,
-                            COUNT(DISTINCT keyword) as keyword_count
-                     FROM keyword_index
-                     WHERE keyword IN ({placeholders})
-                     GROUP BY url, url_hash
-                     ORDER BY keyword_count DESC, total_score DESC
-                     LIMIT %s
-                 ) top
-                     LEFT JOIN urls ON urls.url_hash = top.url_hash
-                     LEFT JOIN keyword_index ki
-                               ON ki.url_hash = top.url_hash
-                                   AND ki.keyword IN ({matched_placeholders})'''
-            c.execute(query, (*keywords, limit, *keywords))
 
 
-            return [(url, keyword, content, float(score)) for url, keyword, content, score in c.fetchall()]
+
+
 
     @locked
     def get_content_by_url(self, url, limit):
@@ -332,6 +262,18 @@ class IndexDB:
             c = conn.cursor()
             c.execute('''SELECT content FROM urls WHERE url = %s LIMIT %s''', (url, limit))
             return c.fetchone()
+
+    @locked
+    def get_contents_by_ids(self, ids):
+        with self.open_db() as conn:
+            c = conn.cursor()
+
+            placeholders = ', '.join(['%s'] * len(ids))
+            query = f'''SELECT id, content FROM urls WHERE id IN ({placeholders})'''
+
+            c.execute(query, list(ids))
+
+            return dict(c.fetchall())
 
     @locked
     def add_link_relation_batch(self, pairs):
@@ -384,12 +326,21 @@ class IndexDB:
 
             return s_map
 
+
+    def get_url_from_ids(self, ids):
+        placeholders = ', '.join(['%s'] * len(ids))
+
+        with self.open_db() as conn:
+            c = conn.cursor()
+
+            c.execute(f'''SELECT id, url FROM urls WHERE id IN ({placeholders})''', tuple(ids))
+            return c.fetchall()
+
     @locked
     def destroy_all_data(self):
 
         tables = [
             "vector_index",
-            "keyword_index",
             "domains",
             "queue",
             "pagerank_scores",

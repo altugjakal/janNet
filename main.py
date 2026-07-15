@@ -62,6 +62,8 @@ def crawl(thread_id):
             traceback.print_exc()
             sleep(5)
 
+    print(f"[crawl thread={thread_id}] Crawl queue cleared, completed iterations: {crawl_count}")
+
 
 def process():
     global _vdb
@@ -96,7 +98,10 @@ def process():
             sleep(5)
 
     _vdb.save_to_disk()
+
     ri_client.commit()
+
+    print(f"[process] Process queue cleared, completed iterations: {process_count}")
 
 
 if __name__ == "__main__":
@@ -112,7 +117,7 @@ if __name__ == "__main__":
         for t_id in range(Config.CRAWL_THREAD_COUNT):
             futures.append(exe.submit(crawl, t_id))
         for _ in range(Config.PROCESS_THREAD_COUNT):
-            futures. end(exe.submit(process))
+            futures.append(exe.submit(process))
 
         if not args.nogui:
             app.run(host=host, port=port, debug=False, use_reloader=False)
