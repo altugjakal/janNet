@@ -14,7 +14,7 @@ class LexicalSearch:
         self.db = db
         self.ri_client = ReverseIndexCommunicator()
 
-    #optimize tomorrow, plus maybe have lexical pool size included
+    # optimize tomorrow, plus maybe have lexical pool size included
     @timed
     def search(self, term):
 
@@ -27,8 +27,13 @@ class LexicalSearch:
             return top / bottom
 
         terms = extract_words(term)
+        terms = list(set(terms))
 
+        t1 = time()
         results = self.ri_client.search(terms)
+        t2 = time()
+        print(f"[lexical] Time taken for ri_client.search: {t2 - t1:.6f}s")
+
         total_url_count = self.db.get_total_url_count()
 
         print(results)
@@ -38,8 +43,13 @@ class LexicalSearch:
             for result in results
             for item in result["postingItems"]
         ]
-        contents = self.db.get_contents_by_ids(doc_ids)
 
+        t3 = time()
+        contents = self.db.get_contents_by_ids(doc_ids)
+        t4 = time()
+        print(f"[lexical] Time taken for db.get_contents_by_ids: {t4 - t3:.6f}s")
+
+        t5 = time()
         id_scores = {}
 
         vectors = defaultdict(lambda: [0.0] * len(set(terms)))
@@ -56,8 +66,8 @@ class LexicalSearch:
             for posting in result["postingItems"]:
                 doc_length = len(contents[posting["docId"]].split())
 
-                #here, account for hit weights
-                tf = len(posting["hits"]) / doc_length
+                # here, account for hit weights - did that but read in the book about tf boosting
+                tf = sum(hit["weight"] for hit in posting["hits"]) / doc_length
                 tfidf = tf * idf
 
                 vectors[posting["docId"]][i] = tfidf
@@ -79,10 +89,14 @@ class LexicalSearch:
                 if score > 0:
                     id_scores[doc_id] = score
 
-                    #return url score mappings not id score, the other end expects URLs for final result display
+                    # return url score mappings not id score, the other end expects URLs for final result display
+        t6 = time()
+        print(f"[lexical] Time taken for math scoring loop: {t6 - t5:.6f}s")
 
+        t7 = time()
         map_over_ids = self.db.get_url_from_ids(id_scores.keys())
-
         url_scores = {url: id_scores[id] for id, url in map_over_ids if id in id_scores}
+        t8 = time()
+        print(f"[lexical] Time taken for get_url_from_ids mapping: {t8 - t7:.6f}s")
 
         return url_scores, contents

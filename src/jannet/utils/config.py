@@ -1,4 +1,5 @@
 class Config:
+
     MODEL = 'sentence-transformers/msmarco-distilbert-dot-v5'
     MODEL_OUTPUT_DIM = 768
     VECTOR_WEIGHT = 0.4
@@ -11,8 +12,9 @@ class Config:
     AUTHORITIVE_MULT = 1.0
     GENERIC_MULT = 0.7
     EDU_MULT = 2.0
-    MAX_CRAWLS = 5
-    MAX_PROCESS = 5
+    MAX_CRAWLS = 20
+    MAX_PROCESS = 20
+
     RETURN_LIMIT = 100
     SCORE_FILTER = 0.000
 

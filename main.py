@@ -73,12 +73,17 @@ def process():
     indexer = Index(db=db, vdb=_vdb)
 
     process_count = 0
+    iteration_deadline = 0
 
     while process_count < Config.MAX_PROCESS:
         try:
             queue = db.get_process_queue_next()
 
             if not queue:
+                if iteration_deadline == 5:
+                    break
+                iteration_deadline += 1
+
                 print("Processed all, sleeping...")
                 sleep(10)
                 continue

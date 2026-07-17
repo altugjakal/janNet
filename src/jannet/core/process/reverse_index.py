@@ -40,8 +40,8 @@ class ReverseIndexCommunicator:
         make_postr(full_url, json)
 
     def search(self, query):
-        dedup_query = set(query)
-        full_term = ' '.join(dedup_query)
+
+        full_term = ' '.join(query)
         encoded_term = urllib.parse.quote(full_term, safe='')
         full_url = self.index_url + f'search/{encoded_term}'
         response = make_getr(full_url)
