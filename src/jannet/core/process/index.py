@@ -63,8 +63,8 @@ class Index:
             print(f"  → Queued {new_count} new URLs")
 
         t4 = time.perf_counter()
-        decapitalised_content = content.lower()
-        root = html.fromstring(decapitalised_content)
+        recapitalised_content = content.lower()
+        root = html.fromstring(recapitalised_content)
 
         token_map = defaultdict(list)
         pos_length = 0

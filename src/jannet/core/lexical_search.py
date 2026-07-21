@@ -14,23 +14,27 @@ class LexicalSearch:
         self.db = db
         self.ri_client = ReverseIndexCommunicator()
 
+    def dot_product(self, a, b):
+        return sum(x * y for x, y in zip(a, b))
+
+    def cosine_similarity(self, a, a_length, b, b_length):
+        top = self.dot_product(a, b)
+        bottom = a_length * b_length
+        return top / bottom
+
     # optimize tomorrow, plus maybe have lexical pool size included
     @timed
     def search(self, term):
 
-        def dot_product(a, b):
-            return sum(x * y for x, y in zip(a, b))
 
-        def cosine_similarity(a, a_length, b, b_length):
-            top = dot_product(a, b)
-            bottom = a_length * b_length
-            return top / bottom
 
         terms = extract_words(term)
-        terms = list(set(terms))
 
         t1 = time()
         results = self.ri_client.search(terms)
+        if not results:
+            return {}, {}
+
         t2 = time()
         print(f"[lexical] Time taken for ri_client.search: {t2 - t1:.6f}s")
 
@@ -44,10 +48,12 @@ class LexicalSearch:
             for item in result["postingItems"]
         ]
 
+
+
         t3 = time()
         contents = self.db.get_contents_by_ids(doc_ids)
         t4 = time()
-        print(f"[lexical] Time taken for db.get_contents_by_ids: {t4 - t3:.6f}s")
+        print(f"[lexical] Time taken for db.get_contents_by_ids ({len(contents)} pulls) : {t4 - t3:.6f}s")
 
         t5 = time()
         id_scores = {}
@@ -85,7 +91,7 @@ class LexicalSearch:
 
                 doc_length_norm = math.sqrt(doc_length_raw)
 
-                score = cosine_similarity(term_vector, query_length, doc_vector, doc_length_norm)
+                score = self.cosine_similarity(term_vector, query_length, doc_vector, doc_length_norm)
                 if score > 0:
                     id_scores[doc_id] = score
 

@@ -12,21 +12,21 @@ class Config:
     AUTHORITIVE_MULT = 1.0
     GENERIC_MULT = 0.7
     EDU_MULT = 2.0
-    MAX_CRAWLS = 20
-    MAX_PROCESS = 20
+    MAX_CRAWLS = 2200
+    MAX_PROCESS = 2000
 
-    RETURN_LIMIT = 100
+    RETURN_LIMIT = 10
     SCORE_FILTER = 0.000
 
     CORNET_URL = 'http://localhost:7777/'
 
-    FIRST_POOL_SIZE = 10
+    FIRST_POOL_SIZE = 5
 
-    DB_PASSWORD = 'AVNS_hZabM_xFW7WDqJyALT8'
-    DB_USER = 'doadmin'
+    DB_PASSWORD = 'altug1601'
+    DB_USER = 'altug'
     DB_DATABASE = 'defaultdb'
-    DB_PORT = 25060
-    DB_HOST = 'db-mysql-fra1-39054-do-user-17164387-0.g.db.ondigitalocean.com'
+    DB_PORT = 3306
+    DB_HOST = 'localhost'
 
     HTML_IMPORTANCE_MAP = {
         "title": 10,
@@ -57,7 +57,7 @@ class Config:
     SLEEP_P = 0
 
     SEED_URLS = [
-        ["https://en.wikipedia.org/wiki/Siege_of_Hennebont"],
+        ["https://en.wikipedia.org/wiki/Computer_science"],
     ]
 
     CRAWL_THREAD_COUNT = 1

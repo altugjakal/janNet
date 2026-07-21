@@ -4,7 +4,6 @@ from time import sleep
 
 from flask_cors import CORS
 
-from api.routes.similar import similar_bp
 from src.jannet.core.process.index import Index
 from src.jannet.core.process.reverse_index import ReverseIndexCommunicator
 from src.jannet.core.process.robots_cache import RobotsCache
@@ -21,7 +20,6 @@ login(token=Config.HF_TOKEN)
 app = Flask(__name__)
 CORS(app)
 app.register_blueprint(search_bp, url_prefix='/search')
-app.register_blueprint(similar_bp, url_prefix='/requery')
 app.register_blueprint(markup_bp, url_prefix='/')
 
 host = '0.0.0.0'
@@ -73,16 +71,12 @@ def process():
     indexer = Index(db=db, vdb=_vdb)
 
     process_count = 0
-    iteration_deadline = 0
 
     while process_count < Config.MAX_PROCESS:
         try:
             queue = db.get_process_queue_next()
 
             if not queue:
-                if iteration_deadline == 5:
-                    break
-                iteration_deadline += 1
 
                 print("Processed all, sleeping...")
                 sleep(10)

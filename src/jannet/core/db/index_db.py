@@ -24,6 +24,7 @@ class IndexDB:
                          url VARCHAR(2048),
                         url_hash CHAR(64) AS (SHA2(url, 256)) STORED ,
                          content LONGTEXT NOT NULL,
+                        content_length INTEGER NOT NULL,
                          processed BOOLEAN NOT NULL DEFAULT 0,
                           crawled_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP)''')
 
@@ -71,6 +72,10 @@ class IndexDB:
 
                 c.execute('CREATE INDEX idx_urls_url ON urls(url);')
 
+                c.execute('CREATE INDEX idx_vector_emb_id ON vector_index(embedding_id);')
+                
+                c.execute('CREATE INDEX idx_vector_url_hash ON vector_index(url_hash);')
+
 
 
 
@@ -96,7 +101,7 @@ class IndexDB:
     def add_url(self, id, url, content):
         with self.open_db() as conn:
             c = conn.cursor()
-            c.execute('''INSERT IGNORE INTO urls (id, url, content) VALUES (%s, %s, %s)''', (id, url, content))
+            c.execute('''INSERT IGNORE INTO urls (id, url, content, content_length) VALUES (%s, %s, %s, %s)''', (id, url, content, len(content.split())))
             conn.commit()
 
     @locked
@@ -255,13 +260,6 @@ class IndexDB:
 
 
 
-
-    @locked
-    def get_content_by_url(self, url, limit):
-        with self.open_db() as conn:
-            c = conn.cursor()
-            c.execute('''SELECT content FROM urls WHERE url = %s LIMIT %s''', (url, limit))
-            return c.fetchone()
 
     @locked
     def get_contents_by_ids(self, ids):
