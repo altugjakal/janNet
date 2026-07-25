@@ -10,17 +10,18 @@ from src.jannet.utils.timer_wrapper import timed
 
 
 class LexicalSearch:
-    def __init__(self, db):
+    def __init__(self, db, b=0.75, k=1.2):
         self.db = db
         self.ri_client = ReverseIndexCommunicator()
+        self.b = b
+        self.k = k
+        self.avg_doc_length = 2200
 
-    def dot_product(self, a, b):
-        return sum(x * y for x, y in zip(a, b))
 
-    def cosine_similarity(self, a, a_length, b, b_length):
-        top = self.dot_product(a, b)
-        bottom = a_length * b_length
-        return top / bottom
+
+    def bm25(self, tf, doc_length, idf):
+        bm25 = (((self.k + 1) * tf) / (self.k * ((1 - self.b) + self.b * (doc_length / self.avg_doc_length)) + tf)) * idf
+        return bm25
 
     # optimize tomorrow, plus maybe have lexical pool size included
     @timed
@@ -32,15 +33,15 @@ class LexicalSearch:
 
         t1 = time()
         results = self.ri_client.search(terms)
+
         if not results:
-            return {}, {}
+            return {}
 
         t2 = time()
         print(f"[lexical] Time taken for ri_client.search: {t2 - t1:.6f}s")
 
         total_url_count = self.db.get_total_url_count()
 
-        print(results)
 
         doc_ids = [
             item["docId"]
@@ -51,58 +52,58 @@ class LexicalSearch:
 
 
         t3 = time()
-        contents = self.db.get_contents_by_ids(doc_ids)
+        content_lengths = self.db.get_content_lengths_by_ids(doc_ids)
         t4 = time()
-        print(f"[lexical] Time taken for db.get_contents_by_ids ({len(contents)} pulls) : {t4 - t3:.6f}s")
+        print(f"[lexical] Time taken for db.get_contents_by_ids ({len(content_lengths)} pulls) : {t4 - t3:.6f}s")
 
         t5 = time()
         id_scores = {}
 
-        vectors = defaultdict(lambda: [0.0] * len(set(terms)))
-        term_vector = [0.0] * len(set(terms))
+        vectors = defaultdict(lambda: [0.0] * len(terms))
+        term_vector = [0.0] * len(terms)
 
         for i, result in enumerate(results):
             df = len(result["postingItems"])
             idf = log1p((total_url_count + 1) / (df + 1)) + 1
 
-            term_tf = terms.count(result["token"]) / len(terms)
-            term_tfidf = term_tf * idf
-            term_vector[i] = term_tfidf
+
+            query_length = len(terms)
+            term_tf = terms.count(result["token"])
+            term_bm25 = self.bm25(term_tf, query_length, idf)
+            term_vector[i] = term_bm25
 
             for posting in result["postingItems"]:
-                doc_length = len(contents[posting["docId"]].split())
+                doc_length = content_lengths[posting["docId"]]
+
+                if doc_length == 0:
+                    continue
 
                 # here, account for hit weights - did that but read in the book about tf boosting
-                tf = sum(hit["weight"] for hit in posting["hits"]) / doc_length
-                tfidf = tf * idf
+                tf = sum(hit["weight"] for hit in posting["hits"])
+                bm25 = self.bm25(tf, doc_length, idf)
 
-                vectors[posting["docId"]][i] = tfidf
 
-        query_length = math.sqrt(len(terms))
+                vectors[posting["docId"]][i] = bm25
+
+
 
         for doc_id, doc_vector in vectors.items():
-            content = contents.get(doc_id)
-            if not content:
-                continue
 
-            doc_length_raw = len(content.split())
+            score =  sum(x + y for x, y in zip(term_vector, doc_vector))
 
-            if doc_length_raw > 0 and query_length > 0:
+            if score > 0:
+                id_scores[doc_id] = score
 
-                doc_length_norm = math.sqrt(doc_length_raw)
 
-                score = self.cosine_similarity(term_vector, query_length, doc_vector, doc_length_norm)
-                if score > 0:
-                    id_scores[doc_id] = score
 
-                    # return url score mappings not id score, the other end expects URLs for final result display
         t6 = time()
         print(f"[lexical] Time taken for math scoring loop: {t6 - t5:.6f}s")
 
         t7 = time()
-        map_over_ids = self.db.get_url_from_ids(id_scores.keys())
-        url_scores = {url: id_scores[id] for id, url in map_over_ids if id in id_scores}
+
         t8 = time()
         print(f"[lexical] Time taken for get_url_from_ids mapping: {t8 - t7:.6f}s")
 
-        return url_scores, contents
+        print({f"{id}: {score}" for id, score in id_scores.items()})
+
+        return id_scores

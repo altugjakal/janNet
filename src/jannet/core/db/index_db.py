@@ -29,11 +29,11 @@ class IndexDB:
                           crawled_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP)''')
 
             c.execute('''CREATE TABLE IF NOT EXISTS link_graph (
-            from_url_id INT,
-            to_url_id INT,
-            crawled_at TIMESTAMP DEFAULT NOW(),
-            PRIMARY KEY (from_url_id, to_url_id)
-            )''')
+    id INTEGER NOT NULL PRIMARY KEY AUTO_INCREMENT,
+    from_url_id INTEGER,
+    to_url_id INTEGER,
+    crawled_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);''')
 
             c.execute('''CREATE TABLE IF NOT EXISTS pagerank_scores (
                          id INTEGER NOT NULL PRIMARY KEY,
@@ -55,14 +55,12 @@ class IndexDB:
                          (domain VARCHAR(512) PRIMARY KEY,
                           added_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP)''')
 
-
-
             c.execute('''CREATE TABLE IF NOT EXISTS vector_index (
-                id INTEGER AUTO_INCREMENT PRIMARY KEY,
-                embedding_id INTEGER NOT NULL,
-                url VARCHAR(2048),
-                url_hash CHAR(64) AS (SHA2(url, 256)) STORED,
-                created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP)''')
+                            id INTEGER NOT NULL,
+                            embedding_id INTEGER NOT NULL,
+                            created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                            PRIMARY KEY (id, embedding_id)
+                         )''')
 
 
             try:
@@ -72,9 +70,10 @@ class IndexDB:
 
                 c.execute('CREATE INDEX idx_urls_url ON urls(url);')
 
-                c.execute('CREATE INDEX idx_vector_emb_id ON vector_index(embedding_id);')
-                
-                c.execute('CREATE INDEX idx_vector_url_hash ON vector_index(url_hash);')
+                c.execute('CREATE INDEX idx_urls_id ON urls(id);')
+
+                c.execute('CREATE INDEX idx_vector_id ON vector_index(id);')
+
 
 
 
@@ -101,6 +100,7 @@ class IndexDB:
     def add_url(self, id, url, content):
         with self.open_db() as conn:
             c = conn.cursor()
+
             c.execute('''INSERT IGNORE INTO urls (id, url, content, content_length) VALUES (%s, %s, %s, %s)''', (id, url, content, len(content.split())))
             conn.commit()
 
@@ -121,6 +121,7 @@ class IndexDB:
             result = c.fetchone()
             conn.commit()
             return result if result else None
+
 
 
 
@@ -211,50 +212,36 @@ class IndexDB:
             c.execute('''SELECT domain FROM domains''')
             return c.fetchall()
 
-    @locked
-    def manage_vector_for_index(self, url, emb_id):
-        with self.open_db() as conn:
-            c = conn.cursor()
-            c.execute('''INSERT INTO vector_index (embedding_id, url) VALUES (%s, %s)''', (emb_id, url))
-            conn.commit()
 
     @locked
     def manage_vector_for_index_batch(self, pairs):
         with self.open_db() as conn:
             c = conn.cursor()
-            c.executemany('''INSERT INTO vector_index (embedding_id, url) VALUES (%s, %s)''', pairs)
+            c.executemany('''INSERT INTO vector_index (id, embedding_id) VALUES (%s, %s)''', pairs)
             conn.commit()
 
-    @locked
-    def get_url_by_vector_id(self, vector_id):
-        with self.open_db() as conn:
-            c = conn.cursor()
-            c.execute('''SELECT vector_index.url, urls.content FROM vector_index 
-                         LEFT JOIN urls ON vector_index.url_hash = urls.url_hash
-                         WHERE embedding_id = %s''', (vector_id,))
-            return c.fetchone()
 
     @locked
-    def get_url_by_vector_id_batch(self, vector_ids):
+    def get_id_by_vector_id_batch(self, vector_ids):
         with self.open_db() as conn:
-            urls = []
-            contents = []
             ids = []
+            contents = []
+            emb_ids = []
             placeholders = ', '.join(['%s'] * len(vector_ids))
             if not placeholders:
-                return ids, urls, contents
+                return emb_ids, ids, contents
             c = conn.cursor()
-            c.execute(f'''SELECT embedding_id, vector_index.url, urls.content 
+            c.execute(f'''SELECT embedding_id, vector_index.id, urls.content 
                          FROM vector_index 
-                         LEFT JOIN urls ON vector_index.url_hash = urls.url_hash
+                         LEFT JOIN urls ON vector_index.id = urls.id
                          WHERE embedding_id IN ({placeholders})''', vector_ids)
             results = c.fetchall()
-            for id, url, content in results:
+            for emb_id, id, content in results:
+                emb_ids.append(emb_id)
                 ids.append(id)
-                urls.append(url)
                 contents.append(content)
 
-            return ids, urls, contents
+            return emb_ids, ids, contents
 
 
 
@@ -268,6 +255,18 @@ class IndexDB:
 
             placeholders = ', '.join(['%s'] * len(ids))
             query = f'''SELECT id, content FROM urls WHERE id IN ({placeholders})'''
+
+            c.execute(query, list(ids))
+
+            return dict(c.fetchall())
+
+    @locked
+    def get_content_lengths_by_ids(self, ids):
+        with self.open_db() as conn:
+            c = conn.cursor()
+
+            placeholders = ', '.join(['%s'] * len(ids))
+            query = f'''SELECT id, content_length FROM urls WHERE id IN ({placeholders})'''
 
             c.execute(query, list(ids))
 
@@ -299,27 +298,26 @@ class IndexDB:
             )
             conn.commit()
 
-    def get_pagerank_scores_batch(self, urls):
+    def get_pagerank_scores_batch(self, ids):
         with self.open_db() as conn:
             c = conn.cursor()
-            placeholders = ','.join(['%s'] * len(urls))
-            s_map = {url: 0 for url in urls}
+            placeholders = ','.join(['%s'] * len(ids))
+            s_map = {id: 0 for id in ids}
 
             try:
                 c.execute(
-                    f'''SELECT urls.url, pagerank_scores.score
+                    f'''SELECT urls.id, pagerank_scores.score
                 FROM urls
                          LEFT JOIN pagerank_scores ON pagerank_scores.id = urls.id
-                WHERE urls.url IN ({ placeholders })''', tuple(urls)
+                WHERE urls.id IN ({ placeholders })''', tuple(ids)
                 )
 
                 results = c.fetchall()
             except Exception as e:
                 traceback.print_exc()
-            print(results)
-            for url, pagerank_score in results:
+            for id, pagerank_score in results:
 
-                s_map[url] = pagerank_score if pagerank_score else 0
+                s_map[id] = pagerank_score if pagerank_score else 0
 
 
             return s_map

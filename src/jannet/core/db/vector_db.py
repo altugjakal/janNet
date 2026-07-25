@@ -26,7 +26,7 @@ class VectorDB:
             self.index = faiss.IndexIDMap2(self.base_index)
 
     @locked
-    def insert(self, text, id):
+    def insert(self, text: str, id: int) -> bool:
         vector = self.vectorise_text(text)
 
         vector = np.array([vector]).astype('float32')
@@ -34,26 +34,30 @@ class VectorDB:
         try:
 
             self.index.add_with_ids(vector, id)
+            return True
 
         except Exception as e:
             print(e)
+            return False
 
     @locked
-    def delete(self, id):
+    def delete(self, id: int) -> bool:
         id_to_remove = np.array([id], dtype='int64')
-        self.index.remove_ids(id_to_remove)
+        try:
+            self.index.remove_ids(id_to_remove)
+            return True
+
+        except Exception as e:
+            print(e)
+            return False
+
+
 
     @locked
-    def find(self, id):
-        self.index.reconstruct(id)
-
-    @locked
-    def euclidian_d(self, query_vector, k=Config.SEMANTIC_POOL_SIZE):
+    def euclidian_d(self, query_vector: list[float] | np.ndarray, k=Config.SEMANTIC_POOL_SIZE) -> list[dict[str, int | float]]:
         faiss.omp_set_num_threads(1)
         query = np.array([query_vector]).astype('float32')
         distances, ids = self.index.search(query, k)
-
-#returns empty array - ids always -1
 
 
         return [
@@ -63,13 +67,13 @@ class VectorDB:
         ]
 
 
-    def vectorise_text(self, text):
+    def vectorise_text(self, text: str) -> np.ndarray:
         model = get_model()
         vector = model.encode(text)
         return vector / np.linalg.norm(vector)
 
 
-    def tokenize_text(self, text):
+    def tokenize_text(self, text: str) -> np.ndarray:
         model = get_model()
         encoded = model.tokenizer(
             text,
@@ -86,9 +90,15 @@ class VectorDB:
 
         return token_embeddings
 
-    def save_to_disk(self):
+    def save_to_disk(self) -> bool:
         current_dir = os.path.dirname(os.path.abspath(__file__))
 
         index_path = os.path.normpath(os.path.join(current_dir, "..", "..", "index", "index.index"))
 
-        faiss.write_index(self.index, index_path)
+        try:
+            faiss.write_index(self.index, index_path)
+            return True
+        except (FileNotFoundError, RuntimeError):
+            return False
+
+

@@ -42,15 +42,23 @@ class HybridSearch:
         kw_search_instance = self.kw_search_instance
 
         print("[hybrid] starting vector search")
-        vector_scores, vector_content = v_search_instance.search(term)
+        vector_scores = v_search_instance.search(term)
         print("[hybrid] vector search done")
 
         print("[hybrid] starting keyword search")
-        keyword_scores, keyword_content = kw_search_instance.search(term)
+        keyword_scores = kw_search_instance.search(term)
         print("[hybrid] keyword search done")
 
-        all_contents = keyword_content | vector_content
-        sorted_contents = {}
+        k_set = (keyword_scores or {}).keys()
+        v_set = (vector_scores or {}).keys()
+        all_ids = set(k_set | v_set)
+
+        if len(all_ids) == 0:
+            return [], []
+
+
+        all_contents = self.db.get_contents_by_ids(all_ids)
+
         clean_sorted_contents = {}
 
         def normalize(scores):
@@ -59,67 +67,79 @@ class HybridSearch:
             mx = max(scores.values())
             mn = min(scores.values())
             if mx == mn:
-                return {url: 1.0 for url in scores}
-            return {url: (s - mn) / (mx - mn) for url, s in scores.items()}
+                return {id: 1.0 for id in scores}
+            return {id: (s - mn) / (mx - mn) for id, s in scores.items()}
 
         keyword_scores = normalize(keyword_scores)
         vector_scores = normalize(vector_scores)
 
-        all_urls = set(keyword_scores.keys()) | set(vector_scores.keys())
 
         print("[hybrid] starting pagerank fetch")
         if Config.PAGERANK_CALCULATION:
-            pagerank_scores = self.db.get_pagerank_scores_batch(all_urls)
+            pagerank_scores = self.db.get_pagerank_scores_batch(all_ids)
         print("[hybrid] pagerank fetch done")
 
         print("[hybrid] starting score combination")
         combined_scores = {}
-        for url in all_urls:
-            kw = keyword_scores.get(url, 0)
-            vec = vector_scores.get(url, 0)
-            pr = pagerank_scores.get(url, 0) if Config.PAGERANK_CALCULATION else 0
+        for id in all_ids:
+            kw = keyword_scores.get(id, 0)
+            vec = vector_scores.get(id, 0)
+            pr = pagerank_scores.get(id, 0) if Config.PAGERANK_CALCULATION else 0
 
 
             if kw + vec < Config.SCORE_FILTER:
-                print(f"[hybrid] Skipping {url}")
+                print(f"[hybrid] Skipping {id}")
                 continue
 
             combined_score = (kw_weight * kw + vector_weight * vec) * (1 + pr)
-            combined_scores[url] = combined_score
+            combined_scores[id] = combined_score
         print("[hybrid] score combination done")
 
+
+
         sorted_urls = sorted(combined_scores.items(), key=lambda x: x[1], reverse=True)[:Config.FIRST_POOL_SIZE]
-        for url, score in sorted_urls:
+        for id, score in sorted_urls:
             try:
-                sorted_contents[url] = all_contents[url]
-                clean_sorted_contents[url] = html_to_clean(all_contents[url])
-                print(f"Passed: {url}")
+                clean_sorted_contents[id] = html_to_clean(all_contents[id])
+                print(f"Passed: {id}")
             except KeyError:
-                print(f"Failed: {url}")
+                print(f"Failed: {id}")
                 continue
 
         print("[hybrid] starting maxsim")
         maxsim_scores = self.maxsim_instance.calculate(term, clean_sorted_contents)
         print("[hybrid] maxsim done")
 
-        final_sorted_contents = {}
+        id_by_url = {}
+        final_scores_by_url = {}
+
+        for s_id, url in self.db.get_url_from_ids(maxsim_scores.keys()):
+            id_by_url[url] = s_id
+            final_scores_by_url[url] = maxsim_scores[s_id]
+
+
         final_sorted_urls = sorted(
-            maxsim_scores.items(),
+            final_scores_by_url.items(),
             key=lambda x: self.get_tld_rank(x[0], x[1]),
             reverse=True
         )
 
-        for url, score in final_sorted_urls:
-            final_sorted_contents[url] = all_contents[url]
+
 
         print(f"\nHybrid search for '{term}' (KW: {kw_weight}, Vec: {vector_weight})")
-        print(f"Found: {len(keyword_scores)} keyword, {len(vector_scores)} vector, {len(all_urls)} total")
+        print(f"Found: {len(keyword_scores)} keyword, {len(vector_scores)} vector, {len(all_ids)} total")
         print("\nTop results:")
 
+        return_urls = []
+        return_contents = []
+
         for i, (url, score) in enumerate(final_sorted_urls, 1):
-            kw = keyword_scores.get(url, 0)
-            vec = vector_scores.get(url, 0)
+            s_id = id_by_url[url]
+            kw = keyword_scores.get(s_id, 0)
+            vec = vector_scores.get(s_id, 0)
             print(f"{i}. {url}")
             print(f"   Final Pool Score: {score:.3f} Initial Pool Values: (KW: {kw:.3f}, Vec: {vec:.3f})")
+            return_urls.append(url)
+            return_contents.append(all_contents[s_id])
 
-        return [url for url, score in final_sorted_urls], [content for content in list(final_sorted_contents.values())]
+        return return_urls, return_contents

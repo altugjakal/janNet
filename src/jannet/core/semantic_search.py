@@ -1,5 +1,6 @@
 import time
 
+
 class SemanticSearch:
     def __init__(self, db=None, vdb=None):
         self.db = db
@@ -15,20 +16,21 @@ class SemanticSearch:
 
         t2 = time.perf_counter()
         map_s = {}
-        url_scores = {}
-        url_contents = {}
+        id_scores = {}
         vector_ids = tuple([v['id'] for v in vectors])
-        ids, urls, contents = self.db.get_url_by_vector_id_batch(vector_ids)
+        emb_ids, ids, contents = self.db.get_id_by_vector_id_batch(vector_ids)
         print(f"[TIMER] db get_url_by_vector_id_batch: {time.perf_counter() - t2:.3f}s")
 
         t3 = time.perf_counter()
         for vector in vectors:
             map_s[vector['id']] = vector['score']
 
-        for id, url, content in zip(ids, urls, contents):
-            url_scores[url] = map_s[id]
-            url_contents[url] = content
+        for emb_id, id, content in zip(emb_ids, ids, contents):
+            id_scores[id] = map_s[emb_id]
         print(f"[TIMER] map results: {time.perf_counter() - t3:.3f}s")
 
         print(f"[TIMER] TOTAL search: {time.perf_counter() - t0:.3f}s")
-        return url_scores, url_contents
+
+        print({f"{id}: {score}" for id, score in id_scores.items()})
+
+        return id_scores

@@ -1,6 +1,9 @@
+import hashlib
 import random
 import time
+import uuid
 from collections import defaultdict
+from typing import Any
 from urllib.parse import urljoin
 
 from lxml import html
@@ -17,11 +20,11 @@ class Index:
         self.vdb = vdb
         self.ri_client = ReverseIndexCommunicator()
 
-    def assign_importance_by_location(self, element_type):
+    def assign_importance_by_location(self, element_type: str) -> int:
         base_importance = Config.HTML_IMPORTANCE_MAP.get(element_type, Config.HTML_DEFAULT_WEIGHT)
         return base_importance
 
-    def process(self, url, content, id):
+    def process(self, url: str, content: str, id: int) -> bool:
         self.db.mark_url_as_processed(id)
         t0 = time.perf_counter()
 
@@ -35,7 +38,7 @@ class Index:
             absolute_url = urljoin(url, anchor)
             absolute_url = absolute_url.rstrip("/")
             absolute_url = absolute_url.split("#")[0]
-            new_url_id = hash(absolute_url) % (10 ** 9)
+            new_url_id = int.from_bytes(hashlib.md5(absolute_url.encode()).digest(), 'big') % 10**9
 
             for value in extract_words(a_v):
                 pass
@@ -89,17 +92,21 @@ class Index:
         print(f"[TIMER] html_to_clean: {time.perf_counter() - t5:.3f}s")
 
         words = clean_content.split()
-        url_emb_pairs = set()
+        id_emb_pairs = set()
         t6 = time.perf_counter()
         for i in range(0, len(words), 400):
             chunk = ' '.join(words[i:i + 400])
-            chunk_id = hash((url, i)) % (10 ** 9)
+            combined_string = f"{id}:{i}"
+            chunk_id = int.from_bytes(hashlib.md5(combined_string.encode('utf-8')).digest(), byteorder='big') % (10 ** 9)
+
             self.vdb.insert(text=chunk, id=chunk_id)
-            url_emb_pairs.add((chunk_id, url))
-        print(f"[TIMER] vdb chunk insert ({len(url_emb_pairs)} chunks): {time.perf_counter() - t6:.3f}s")
+            id_emb_pairs.add((id, chunk_id))  #use doc id
+        print(f"[TIMER] vdb chunk insert ({len(id_emb_pairs)} chunks): {time.perf_counter() - t6:.3f}s")
 
         t7 = time.perf_counter()
-        self.db.manage_vector_for_index_batch(list(url_emb_pairs))
+        self.db.manage_vector_for_index_batch(list(id_emb_pairs))
         print(f"[TIMER] manage_vector_for_index_batch: {time.perf_counter() - t7:.3f}s")
 
         print(f"[TIMER] TOTAL process: {time.perf_counter() - t0:.3f}s")
+
+        return True

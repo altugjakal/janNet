@@ -1,5 +1,6 @@
-import traceback
+
 from dataclasses import dataclass
+from typing import Any
 from urllib.parse import urlparse
 import re
 from lxml import html
@@ -8,10 +9,10 @@ import tldextract
 
 @dataclass
 class PageElements:
-    title: []
-    headings: []
-    paragraphs: []
-    description: []
+    title: list[str]
+    headings: list[str]
+    paragraphs: list[str]
+    description: list[str]
 
 
 def reformat_html_tags(html_content):
@@ -88,43 +89,44 @@ def reformat_html_tags(html_content):
     return page_elements
 
 
-def html_to_clean(html):
+def html_to_clean(html_input):
     # god, I hate this, fuck
 
-    html = re.sub(r'<!--.*?-->', '', html, flags=re.DOTALL)
+    html_input = re.sub(r'<!--.*?-->', '', html_input, flags=re.DOTALL)
 
-    html = re.sub(r'<script[^>]*>.*?</script>', '', html, flags=re.DOTALL | re.IGNORECASE)
-    html = re.sub(r'<style[^>]*>.*?</style>', '', html, flags=re.DOTALL | re.IGNORECASE)
+    html_input = re.sub(r'<script[^>]*>.*?</script>', '', html_input, flags=re.DOTALL | re.IGNORECASE)
+    html_input = re.sub(r'<style[^>]*>.*?</style>', '', html_input, flags=re.DOTALL | re.IGNORECASE)
 
-    html = re.sub(r'<head[^>]*>.*?</head>', '', html, flags=re.DOTALL | re.IGNORECASE)
+    html_input = re.sub(r'<head[^>]*>.*?</head>', '', html_input, flags=re.DOTALL | re.IGNORECASE)
 
     for _ in range(5):
-        html = re.sub(r'<header[^>]*>.*?</header>', '', html, flags=re.DOTALL | re.IGNORECASE)
-        html = re.sub(r'<nav[^>]*>.*?</nav>', '', html, flags=re.DOTALL | re.IGNORECASE)
-        html = re.sub(r'<footer[^>]*>.*?</footer>', '', html, flags=re.DOTALL | re.IGNORECASE)
-        html = re.sub(r'<aside[^>]*>.*?</aside>', '', html, flags=re.DOTALL | re.IGNORECASE)
+        html_input = re.sub(r'<header[^>]*>.*?</header>', '', html_input, flags=re.DOTALL | re.IGNORECASE)
+        html_input = re.sub(r'<nav[^>]*>.*?</nav>', '', html_input, flags=re.DOTALL | re.IGNORECASE)
+        html_input = re.sub(r'<footer[^>]*>.*?</footer>', '', html_input, flags=re.DOTALL | re.IGNORECASE)
+        html_input = re.sub(r'<aside[^>]*>.*?</aside>', '', html_input, flags=re.DOTALL | re.IGNORECASE)
 
-    html = re.sub(r'<(iframe|noscript|form|button|svg|input|select|textarea)[^>]*>.*?</\1>', '', html,
-                  flags=re.DOTALL | re.IGNORECASE)
-    html = re.sub(r'<(iframe|noscript|form|button|svg|input|select|textarea)[^>]*/>', '', html, flags=re.IGNORECASE)
+    html_input = re.sub(r'<(iframe|noscript|form|button|svg|input|select|textarea)[^>]*>.*?</\1>', '', html_input,
+                        flags=re.DOTALL | re.IGNORECASE)
+    html_input = re.sub(r'<(iframe|noscript|form|button|svg|input|select|textarea)[^>]*/>', '', html_input, flags=re.IGNORECASE)
 
-    html = re.sub(r'<[^>]+>', ' ', html)
+    html_input = re.sub(r'<[^>]+>', ' ', html_input)
 
-    html = re.sub(r'&[a-zA-Z0-9#]+;', ' ', html)
+    html_input = re.sub(r'&[a-zA-Z0-9#]+;', ' ', html_input)
 
-    html = re.sub(r'\s+', ' ', html).strip()
+    html_input = re.sub(r'\s+', ' ', html_input).strip()
 
-    return html
+    return html_input
 
 
-def extract_anchors(html_content):
+def extract_anchors(html_content: str) -> tuple[list[Any], list[Any]]:
     tree = html.fromstring(html_content)
-
+    anchors = []
     if tree:
         anchors = tree.xpath("//a")
 
     links = []
     values = []
+
     for a in anchors:
         href = a.get("href")
         text = a.text_content().strip()

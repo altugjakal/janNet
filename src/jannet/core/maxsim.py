@@ -11,12 +11,12 @@ class MaxSim:
 
         final_scores = {}
         term_tokens = self.vdb.tokenize_text(term).squeeze(0)
-        for url, content in contents.items():
+        for id, content in contents.items():
 
             content_tokens = self.vdb.tokenize_text(content).squeeze(0)
             similarity_matrix = term_tokens @ content_tokens.T
             max_similarities = similarity_matrix.max(dim=1).values
-            final_scores[url] = max_similarities.sum().item()
+            final_scores[id] = max_similarities.sum().item()
 
         return final_scores
 

@@ -1,4 +1,5 @@
 import urllib.parse
+from typing import Any
 
 from src.jannet.utils.config import Config
 from src.jannet.utils.misc import make_postr, make_getr
@@ -31,15 +32,16 @@ class ReverseIndexCommunicator:
 
         make_postr(full_url, json)
 
-    def commit(self):
+    def commit(self) -> bool:
         full_url = self.index_url + 'commit'
         json = {
 
         }
 
         make_postr(full_url, json)
+        return True
 
-    def search(self, query):
+    def search(self, query: str) -> Any:
 
         full_term = ' '.join(query)
         encoded_term = urllib.parse.quote(full_term, safe='')

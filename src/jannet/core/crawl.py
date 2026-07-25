@@ -5,9 +5,8 @@ from protego import Protego
 
 from src.jannet.utils.config import Config
 from src.jannet.managers.db_manager import get_db, get_vdb
-from src.jannet.utils.parsing import extract_anchors, html_to_clean, get_url_root, reformat_html_tags, get_domain
-from src.jannet.utils.misc import extract_words, make_getr
-from urllib.parse import urljoin
+from src.jannet.utils.parsing import get_url_root, get_domain
+from src.jannet.utils.misc import  make_getr
 
 from src.jannet.utils.timer_wrapper import timed
 

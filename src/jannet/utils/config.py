@@ -12,15 +12,15 @@ class Config:
     AUTHORITIVE_MULT = 1.0
     GENERIC_MULT = 0.7
     EDU_MULT = 2.0
-    MAX_CRAWLS = 2200
-    MAX_PROCESS = 2000
+    MAX_CRAWLS = 7000
+    MAX_PROCESS = 5000
 
     RETURN_LIMIT = 10
     SCORE_FILTER = 0.000
 
     CORNET_URL = 'http://localhost:7777/'
 
-    FIRST_POOL_SIZE = 5
+    FIRST_POOL_SIZE = 10
 
     DB_PASSWORD = 'altug1601'
     DB_USER = 'altug'
@@ -57,11 +57,13 @@ class Config:
     SLEEP_P = 0
 
     SEED_URLS = [
+        ["https://en.wikipedia.org/wiki/Information_retrieval"],
         ["https://en.wikipedia.org/wiki/Computer_science"],
+        ["https://www.britannica.com/science/computer-science"],
     ]
 
-    CRAWL_THREAD_COUNT = 1
-    PROCESS_THREAD_COUNT = 1
+    CRAWL_THREAD_COUNT = 3
+    PROCESS_THREAD_COUNT = 3
     assert len(SEED_URLS) == CRAWL_THREAD_COUNT
 
     DESIGN_FILE_EXTS = (".png", ".jpg", ".jpeg", ".ico", ".webp", ".svg", ".css", ".docx")
