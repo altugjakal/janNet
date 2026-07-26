@@ -2,12 +2,14 @@ import traceback
 from time import sleep
 
 from src.jannet.core.process.index import Index
+from src.jannet.core.process.queuers.process_queuer import ProcessQueuer
 from src.jannet.managers.db_manager import get_db
 from src.jannet.utils.config import Config
 
 
-def process(vdb):
-    db = get_db()
+def process(vdb, db, pc):
+
+
 
     indexer = Index(db=db, vdb=vdb)
 
@@ -15,7 +17,7 @@ def process(vdb):
 
     while process_count < Config.MAX_PROCESS:
         try:
-            queue = db.get_process_queue_next()
+            queue = pc.get()
 
             if not queue:
                 print("Processed all, sleeping...")

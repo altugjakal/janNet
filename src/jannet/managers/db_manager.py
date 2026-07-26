@@ -1,11 +1,11 @@
 
-
 import threading
 
 from src.jannet.utils.config import Config
 
 _local = threading.local()
 _db_lock = threading.Lock()
+_vdb_lock = threading.Lock()
 
 def get_vdb():
     if not hasattr(_local, 'vdb'):
@@ -21,3 +21,6 @@ def get_db():
 
 def get_db_lock():
     return _db_lock
+
+def get_vdb_lock():
+    return _vdb_lock

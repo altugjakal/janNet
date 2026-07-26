@@ -2,13 +2,12 @@ import traceback
 from time import sleep
 
 from src.jannet.core.crawl import Crawl
-from src.jannet.managers.db_manager import get_db
 from src.jannet.utils.config import Config
 
 
-def crawl(thread_id, vdb, rc):
+def crawl(thread_id, vdb, rc, db):
 
-    db = get_db()
+
 
     crawler = Crawl(sleep_median=Config.SLEEP_M, sleep_padding=Config.SLEEP_P, db=db, vdb=vdb, rc=rc,
                     thread_id=thread_id)

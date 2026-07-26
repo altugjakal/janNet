@@ -2,7 +2,7 @@ import traceback
 
 import mysql.connector
 from contextlib import contextmanager
-from src.jannet.utils.thread_lock_wrapper import locked
+from src.jannet.utils.thread_lock_wrapper import db_locked
 
 
 class IndexDB:
@@ -96,15 +96,15 @@ class IndexDB:
             traceback.print_exc()
             raise
 
-    @locked
+    @db_locked
     def add_url(self, id, url, content):
         with self.open_db() as conn:
             c = conn.cursor()
 
-            c.execute('''INSERT IGNORE INTO urls (id, url, content, content_length) VALUES (%s, %s, %s, %s)''', (id, url, content, len(content.split())))
+            c.execute('''INSERT INTO urls (id, url, content, content_length) VALUES (%s, %s, %s, %s)''', (id, url, content, len(content.split())))
             conn.commit()
 
-    @locked
+    @db_locked
     def mark_url_as_processed(self, id):
         with self.open_db() as conn:
             c = conn.cursor()
@@ -112,20 +112,28 @@ class IndexDB:
                 '''UPDATE urls SET processed = 1 WHERE id = %s''', (id,))
             conn.commit()
 
-    @locked
-    def get_process_queue_next(self):
+    @db_locked
+    def get_process_queue(self, limit):
         with self.open_db() as conn:
             c = conn.cursor()
-            c.execute('''SELECT url, content, id FROM urls WHERE processed = 0 LIMIT 1''', ())
 
-            result = c.fetchone()
+            c.execute('SELECT id FROM urls WHERE processed = 0 LIMIT %s FOR UPDATE SKIP LOCKED', (limit,))
+            ids = [row[0] for row in c.fetchall()]
+
+            if not ids:
+                return []
+
+            placeholders = ','.join(['%s'] * len(ids))
+
+            c.execute(f'SELECT url, content, id FROM urls WHERE id IN ({placeholders})', tuple(ids))
+            results = c.fetchall()
+
+            c.execute(f'UPDATE urls SET processed = 2 WHERE id IN ({placeholders})', tuple(ids))
+
             conn.commit()
-            return result if result else None
+            return results
 
-
-
-
-    @locked
+    @db_locked
     def is_url_visited(self, url):
         with self.open_db() as conn:
             c = conn.cursor()
@@ -133,14 +141,14 @@ class IndexDB:
             return c.fetchone() is not None
 
 
-    @locked
+    @db_locked
     def add_to_queue(self, id, url, thread_id):
         with self.open_db() as conn:
             c = conn.cursor()
             c.execute('''INSERT IGNORE INTO queue (id, url, issuer_thread_id) VALUES (%s, %s, %s)''', (id, url, thread_id))
             conn.commit()
 
-    @locked
+    @db_locked
     def add_to_queue_batch(self, pairs, thread_id):
         with self.open_db() as conn:
             c = conn.cursor()
@@ -153,35 +161,35 @@ class IndexDB:
 
 
 
-    @locked
+    @db_locked
     def get_total_url_count(self):
         with self.open_db() as conn:
             c = conn.cursor()
             c.execute('''SELECT COUNT(*) FROM urls''')
             return c.fetchone()[0]
 
-    @locked
+    @db_locked
     def get_queue_size(self, thread_id):
         with self.open_db() as conn:
             c = conn.cursor()
             c.execute('''SELECT COUNT(*) FROM queue WHERE issuer_thread_id = %s''', (thread_id,))
             return c.fetchone()[0]
 
-    @locked
+    @db_locked
     def drop_from_queue(self, url, thread_id):
         with self.open_db() as conn:
             c = conn.cursor()
             c.execute('''DELETE FROM queue WHERE url_hash = SHA2(%s, 256) AND issuer_thread_id = %s''', (url, thread_id))
             conn.commit()
 
-    @locked
+    @db_locked
     def is_in_queue(self, url, thread_id):
         with self.open_db() as conn:
             c = conn.cursor()
             c.execute('''SELECT url FROM queue WHERE url_hash = SHA2(%s, 256) AND issuer_thread_id = %s''', (url, thread_id))
             return c.fetchone() is not None
 
-    @locked
+    @db_locked
     def get_queue_next(self, thread_id):
         with self.open_db() as conn:
             c = conn.cursor()
@@ -191,21 +199,21 @@ class IndexDB:
             result = c.fetchone()
             conn.commit()
             return result if result else []
-    @locked
+    @db_locked
     def add_domain(self, domain):
         with self.open_db() as conn:
             c = conn.cursor()
             c.execute('''INSERT IGNORE INTO domains (domain) VALUES (%s)''', (domain,))
             conn.commit()
 
-    @locked
+    @db_locked
     def check_domain(self, domain):
         with self.open_db() as conn:
             c = conn.cursor()
             c.execute('''SELECT domain FROM domains WHERE domain = %s''', (domain,))
             return c.fetchone() is not None
 
-    @locked
+    @db_locked
     def get_domains(self):
         with self.open_db() as conn:
             c = conn.cursor()
@@ -213,7 +221,7 @@ class IndexDB:
             return c.fetchall()
 
 
-    @locked
+    @db_locked
     def manage_vector_for_index_batch(self, pairs):
         with self.open_db() as conn:
             c = conn.cursor()
@@ -221,7 +229,7 @@ class IndexDB:
             conn.commit()
 
 
-    @locked
+    @db_locked
     def get_id_by_vector_id_batch(self, vector_ids):
         with self.open_db() as conn:
             ids = []
@@ -248,7 +256,7 @@ class IndexDB:
 
 
 
-    @locked
+    @db_locked
     def get_contents_by_ids(self, ids):
         with self.open_db() as conn:
             c = conn.cursor()
@@ -260,7 +268,7 @@ class IndexDB:
 
             return dict(c.fetchall())
 
-    @locked
+    @db_locked
     def get_content_lengths_by_ids(self, ids):
         with self.open_db() as conn:
             c = conn.cursor()
@@ -272,7 +280,7 @@ class IndexDB:
 
             return dict(c.fetchall())
 
-    @locked
+    @db_locked
     def add_link_relation_batch(self, pairs):
         with self.open_db() as conn:
             pairs = list(pairs)
@@ -332,7 +340,7 @@ class IndexDB:
             c.execute(f'''SELECT id, url FROM urls WHERE id IN ({placeholders})''', tuple(ids))
             return c.fetchall()
 
-    @locked
+    @db_locked
     def destroy_all_data(self):
 
         tables = [

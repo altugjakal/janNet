@@ -1,12 +1,11 @@
 import os
-import traceback
 
 import torch
 
 from src.jannet.managers.model_manager import get_model
 import numpy as np
 import faiss
-from src.jannet.utils.thread_lock_wrapper import locked
+from src.jannet.utils.thread_lock_wrapper import db_locked, vdb_locked
 from src.jannet.utils.config import Config
 
 class VectorDB:
@@ -25,7 +24,7 @@ class VectorDB:
             self.base_index = faiss.IndexFlatL2(dimension)
             self.index = faiss.IndexIDMap2(self.base_index)
 
-    @locked
+    @vdb_locked
     def insert(self, text: str, id: int) -> bool:
         vector = self.vectorise_text(text)
 
@@ -40,7 +39,7 @@ class VectorDB:
             print(e)
             return False
 
-    @locked
+    @vdb_locked
     def delete(self, id: int) -> bool:
         id_to_remove = np.array([id], dtype='int64')
         try:
@@ -53,7 +52,7 @@ class VectorDB:
 
 
 
-    @locked
+    @db_locked
     def euclidian_d(self, query_vector: list[float] | np.ndarray, k=Config.SEMANTIC_POOL_SIZE) -> list[dict[str, int | float]]:
         faiss.omp_set_num_threads(1)
         query = np.array([query_vector]).astype('float32')

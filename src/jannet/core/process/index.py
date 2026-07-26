@@ -25,7 +25,7 @@ class Index:
         return base_importance
 
     def process(self, url: str, content: str, id: int) -> bool:
-        self.db.mark_url_as_processed(id)
+
         t0 = time.perf_counter()
 
         t1 = time.perf_counter()
@@ -106,6 +106,8 @@ class Index:
         t7 = time.perf_counter()
         self.db.manage_vector_for_index_batch(list(id_emb_pairs))
         print(f"[TIMER] manage_vector_for_index_batch: {time.perf_counter() - t7:.3f}s")
+
+        self.db.mark_url_as_processed(id)
 
         print(f"[TIMER] TOTAL process: {time.perf_counter() - t0:.3f}s")
 
