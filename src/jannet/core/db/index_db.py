@@ -1,12 +1,15 @@
-import traceback
+import logging
 
 import mysql.connector
 from contextlib import contextmanager
 from src.jannet.utils.thread_lock_wrapper import db_locked
 
+logger = logging.getLogger(__name__)
 
 class IndexDB:
     def __init__(self, host, user, password, database, port):
+
+
 
         self.config = {
             'host': host,
@@ -19,51 +22,53 @@ class IndexDB:
         with self.open_db() as conn:
             c = conn.cursor()
 
-            c.execute('''CREATE TABLE IF NOT EXISTS urls
-                         (id INTEGER PRIMARY KEY,
-                         url VARCHAR(2048),
-                        url_hash CHAR(64) AS (SHA2(url, 256)) STORED ,
-                         content LONGTEXT NOT NULL,
-                        content_length INTEGER NOT NULL,
-                         processed BOOLEAN NOT NULL DEFAULT 0,
-                          crawled_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP)''')
-
-            c.execute('''CREATE TABLE IF NOT EXISTS link_graph (
-    id INTEGER NOT NULL PRIMARY KEY AUTO_INCREMENT,
-    from_url_id INTEGER,
-    to_url_id INTEGER,
-    crawled_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-);''')
-
-            c.execute('''CREATE TABLE IF NOT EXISTS pagerank_scores (
-                         id INTEGER NOT NULL PRIMARY KEY,
-                         score DOUBLE NOT NULL,
-                         added_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP)
-                
-            
-            ''')
-
-            c.execute('''CREATE TABLE IF NOT EXISTS queue
-            
-                         (url VARCHAR(2048),
-                         url_hash CHAR(64) AS (SHA2(url, 256)) STORED,
-                         id INTEGER NOT NULL PRIMARY KEY,
-                         issuer_thread_id INTEGER NOT NULL,
-                          added_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP)''')
-
-            c.execute('''CREATE TABLE IF NOT EXISTS domains
-                         (domain VARCHAR(512) PRIMARY KEY,
-                          added_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP)''')
-
-            c.execute('''CREATE TABLE IF NOT EXISTS vector_index (
-                            id INTEGER NOT NULL,
-                            embedding_id INTEGER NOT NULL,
-                            created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
-                            PRIMARY KEY (id, embedding_id)
-                         )''')
-
-
             try:
+
+                c.execute('''CREATE TABLE IF NOT EXISTS urls
+                             (id INTEGER PRIMARY KEY,
+                             url VARCHAR(2048),
+                            url_hash CHAR(64) AS (SHA2(url, 256)) STORED ,
+                             content LONGTEXT NOT NULL,
+                            content_length INTEGER NOT NULL,
+                             processed BOOLEAN NOT NULL DEFAULT 0,
+                              crawled_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP)''')
+
+                c.execute('''CREATE TABLE IF NOT EXISTS link_graph (
+        id INTEGER NOT NULL PRIMARY KEY AUTO_INCREMENT,
+        from_url_id INTEGER,
+        to_url_id INTEGER,
+        crawled_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    );''')
+
+                c.execute('''CREATE TABLE IF NOT EXISTS pagerank_scores (
+                             id INTEGER NOT NULL PRIMARY KEY,
+                             score DOUBLE NOT NULL,
+                             added_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP)
+                    
+                
+                ''')
+
+                c.execute('''CREATE TABLE IF NOT EXISTS queue
+                
+                             (url VARCHAR(2048),
+                             url_hash CHAR(64) AS (SHA2(url, 256)) STORED,
+                             id INTEGER NOT NULL PRIMARY KEY,
+                             issuer_thread_id INTEGER NOT NULL,
+                              added_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP)''')
+
+                c.execute('''CREATE TABLE IF NOT EXISTS domains
+                             (domain VARCHAR(512) PRIMARY KEY,
+                              added_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP)''')
+
+                c.execute('''CREATE TABLE IF NOT EXISTS vector_index (
+                                id INTEGER NOT NULL,
+                                embedding_id INTEGER NOT NULL,
+                                created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                                PRIMARY KEY (id, embedding_id)
+                             )''')
+
+
+
                 c.execute('CREATE INDEX idx_queue_url_hash ON queue(url_hash);')
 
                 c.execute('CREATE INDEX idx_urls_url_hash ON urls(url_hash);')
@@ -79,7 +84,8 @@ class IndexDB:
 
 
             except mysql.connector.errors.DatabaseError:
-                pass
+                logger.error('Could not create indexes/tables.')
+
 
 
 
@@ -93,8 +99,7 @@ class IndexDB:
             yield conn
         except mysql.connector.Error as e:
             conn.rollback()
-            traceback.print_exc()
-            raise
+            logger.error('Could not connect to database.')
 
     @db_locked
     def add_url(self, id, url, content):
@@ -233,23 +238,21 @@ class IndexDB:
     def get_id_by_vector_id_batch(self, vector_ids):
         with self.open_db() as conn:
             ids = []
-            contents = []
             emb_ids = []
             placeholders = ', '.join(['%s'] * len(vector_ids))
             if not placeholders:
-                return emb_ids, ids, contents
+                return emb_ids, ids
             c = conn.cursor()
-            c.execute(f'''SELECT embedding_id, vector_index.id, urls.content 
+            c.execute(f'''SELECT embedding_id, vector_index.id
                          FROM vector_index 
                          LEFT JOIN urls ON vector_index.id = urls.id
                          WHERE embedding_id IN ({placeholders})''', vector_ids)
             results = c.fetchall()
-            for emb_id, id, content in results:
+            for emb_id, id in results:
                 emb_ids.append(emb_id)
                 ids.append(id)
-                contents.append(content)
 
-            return emb_ids, ids, contents
+            return emb_ids, ids
 
 
 
@@ -312,17 +315,17 @@ class IndexDB:
             placeholders = ','.join(['%s'] * len(ids))
             s_map = {id: 0 for id in ids}
 
-            try:
-                c.execute(
-                    f'''SELECT urls.id, pagerank_scores.score
-                FROM urls
-                         LEFT JOIN pagerank_scores ON pagerank_scores.id = urls.id
-                WHERE urls.id IN ({ placeholders })''', tuple(ids)
-                )
 
-                results = c.fetchall()
-            except Exception as e:
-                traceback.print_exc()
+            c.execute(
+                f'''SELECT urls.id, pagerank_scores.score
+            FROM urls
+                     LEFT JOIN pagerank_scores ON pagerank_scores.id = urls.id
+            WHERE urls.id IN ({ placeholders })''', tuple(ids)
+            )
+
+            results = c.fetchall()
+
+
             for id, pagerank_score in results:
 
                 s_map[id] = pagerank_score if pagerank_score else 0

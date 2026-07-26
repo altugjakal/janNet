@@ -1,15 +1,13 @@
-import traceback
+import logging
 from time import sleep
 
 from src.jannet.core.process.index import Index
-from src.jannet.core.process.queuers.process_queuer import ProcessQueuer
-from src.jannet.managers.db_manager import get_db
 from src.jannet.utils.config import Config
+
+logger = logging.getLogger(__name__)
 
 
 def process(vdb, db, pc):
-
-
 
     indexer = Index(db=db, vdb=vdb)
 
@@ -20,22 +18,24 @@ def process(vdb, db, pc):
             queue = pc.get()
 
             if not queue:
-                print("Processed all, sleeping...")
+                logger.info("Process queue empty, sleeping")
                 sleep(10)
                 continue
 
             url = queue[0]
             content = queue[1]
-            id = queue[2]
+            doc_id = queue[2]
 
-            print("Next: ", url)
+            logger.info("Processing %s", url)
 
-            indexer.process(url, content, id)
+            indexer.process(url, content, doc_id)
             process_count += 1
 
         except Exception:
-            print(f"[process] Exception:")
-            traceback.print_exc()
+            logger.exception("Processing iteration failed")
             sleep(5)
 
-    print(f"[process] Process queue cleared, completed iterations: {process_count}")
+    logger.info(
+        "Process queue completed after %d iterations",
+        process_count
+    )

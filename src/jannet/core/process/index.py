@@ -1,9 +1,8 @@
 import hashlib
+import logging
 import random
 import time
-import uuid
 from collections import defaultdict
-from typing import Any
 from urllib.parse import urljoin
 
 from lxml import html
@@ -13,6 +12,7 @@ from src.jannet.utils.config import Config
 from src.jannet.utils.misc import extract_words
 from src.jannet.utils.parsing import extract_anchors, html_to_clean
 
+logger = logging.getLogger(__name__)
 
 class Index:
     def __init__(self, db, vdb):
@@ -52,22 +52,22 @@ class Index:
             to_be_queued.add((new_url_id, absolute_url))
             to_be_graphed.add((id, new_url_id))
             new_count += 1
-        print(f"[TIMER] parse anchors: {time.perf_counter() - t1:.3f}s")
+        logger.info("Parse anchors: %.3fs", time.perf_counter() - t1)
 
         t2 = time.perf_counter()
         self.db.add_link_relation_batch(to_be_graphed)
-        print(f"[TIMER] add_link_relation_batch: {time.perf_counter() - t2:.3f}s")
+        logger.info("add_link_relation_batch: %.3fs", time.perf_counter() - t2)
 
         t3 = time.perf_counter()
         self.db.add_to_queue_batch(to_be_queued, thread_id=(random.randrange(0, Config.CRAWL_THREAD_COUNT)))
-        print(f"[TIMER] add_to_queue_batch ({new_count} urls): {time.perf_counter() - t3:.3f}s")
+        logger.info("add_to_queue_batch (%d urls): %.3fs", new_count, time.perf_counter() - t3)
 
         if new_count > 0:
-            print(f"  → Queued {new_count} new URLs")
+            logger.info("Queued %d new URLs", new_count)
 
         t4 = time.perf_counter()
-        recapitalised_content = content.lower()
-        root = html.fromstring(recapitalised_content)
+
+        root = html.fromstring(content)
 
         token_map = defaultdict(list)
         pos_length = 0
@@ -76,6 +76,7 @@ class Index:
             text_content = e.text if e.text else ""
             if not text_content.strip():
                 continue
+            text_content = text_content.lower()
 
             importance = self.assign_importance_by_location(e.tag)
             for j, token in enumerate(text_content.split(" ")):
@@ -85,11 +86,11 @@ class Index:
             pos_length += len(e.text.split(" "))
 
         self.ri_client.insert(id, token_map)
-        print(f"[TIMER] html parse & reverse index insertion: {time.perf_counter() - t4:.3f}s")
+        logger.info("HTML parse & reverse index insertion: %.3fs", time.perf_counter() - t4)
 
         t5 = time.perf_counter()
         clean_content = html_to_clean(content)
-        print(f"[TIMER] html_to_clean: {time.perf_counter() - t5:.3f}s")
+        logger.info("html_to_clean: %.3fs", time.perf_counter() - t5)
 
         words = clean_content.split()
         id_emb_pairs = set()
@@ -101,14 +102,14 @@ class Index:
 
             self.vdb.insert(text=chunk, id=chunk_id)
             id_emb_pairs.add((id, chunk_id))  #use doc id
-        print(f"[TIMER] vdb chunk insert ({len(id_emb_pairs)} chunks): {time.perf_counter() - t6:.3f}s")
+        logger.info("VDB chunk insert (%d chunks): %.3fs", len(id_emb_pairs), time.perf_counter() - t6)
 
         t7 = time.perf_counter()
         self.db.manage_vector_for_index_batch(list(id_emb_pairs))
-        print(f"[TIMER] manage_vector_for_index_batch: {time.perf_counter() - t7:.3f}s")
+        logger.info("manage_vector_for_index_batch: %.3fs", time.perf_counter() - t7)
 
         self.db.mark_url_as_processed(id)
 
-        print(f"[TIMER] TOTAL process: {time.perf_counter() - t0:.3f}s")
+        logger.info("TOTAL process: %.3fs", time.perf_counter() - t0)
 
         return True

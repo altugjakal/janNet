@@ -1,3 +1,4 @@
+import logging
 import random
 import time
 
@@ -8,9 +9,9 @@ from src.jannet.managers.db_manager import get_db, get_vdb
 from src.jannet.utils.parsing import get_url_root, get_domain
 from src.jannet.utils.misc import  make_getr
 
-from src.jannet.utils.timer_wrapper import timed
 
-@timed
+logger = logging.getLogger(__name__)
+
 class Crawl:
     def __init__(self, sleep_median, sleep_padding, db=get_db(), vdb=get_vdb(), rc=None, thread_id=None):
         self.sleep_median = sleep_median
@@ -27,7 +28,7 @@ class Crawl:
         domain = get_domain(url)
 
         if self.db.is_url_visited(url):
-            print(f"[Thread {self.thread_id}] {url} is already visited")
+            logger.info("Thread %d: %s already visited", self.thread_id, url)
             self.db.drop_from_queue(url, thread_id=self.thread_id)
             return
 
@@ -54,12 +55,13 @@ class Crawl:
 
                 if not can_fetch:
                     self.db.drop_from_queue(url, thread_id=self.thread_id)
-                    print(f"[Thread {self.thread_id}] Blocked by robots.txt: {url}")
+                    logger.warning("Thread %d: blocked by robots.txt: %s", self.thread_id, url)
                     return
 
-                print(f"[Thread {self.thread_id}] robots.txt OK for {url} (crawl-delay: {delay})")
+                logger.info("Thread %d: robots.txt OK for: %s", self.thread_id, url)
             except Exception as e:
-                print(f"[Thread {self.thread_id}] robots.txt fetch failed for {url}: {e}")
+
+                logger.exception("Thread %d: robots.txt fetch failed for %s", self.thread_id, url)
 
             self.rc.add(domain, disallowed_pages, delay)
 
@@ -67,20 +69,21 @@ class Crawl:
 
         try:
             content = make_getr(url).text
-            print(f"[Thread {self.thread_id}] 200 OK: {url}")
+            logger.info(f"Thread %d: 200 OK for %s" , self.thread_id, url)
         except Exception as e:
-            print(f"[Thread {self.thread_id}] Crawl failed for {url}: {e}")
+            logger.exception("Thread %d: crawl failed for %s", self.thread_id, url)
             self.db.drop_from_queue(url, thread_id=self.thread_id)
             return
 
         self.db.drop_from_queue(url, thread_id=self.thread_id)
         if not content:
-            print(f"[Thread {self.thread_id}] Empty content, skipping: {url}")
+            logger.warning("Thread %d: Empty content", self.thread_id)
             return
 
         self.db.add_url(id, url, content)
-        print(f"[Thread {self.thread_id}] Stored: {url}")
+        logger.info("Thread %d: stored %s", self.thread_id, url)
+
 
         sleep_time = delay if delay else (sleep_median + random.uniform(-sleep_padding, sleep_padding))
-        print(f"[Thread {self.thread_id}] Sleeping {sleep_time:.2f}s")
+        logger.info("Thread %d: sleeping %.2fs", self.thread_id, sleep_time)
         time.sleep(sleep_time)

@@ -8,15 +8,13 @@ from src.jannet.utils.config import Config
 from api.routes.search import search_bp
 
 
-def create_app(config_class=Config):
+def create_app():
 
     login(token=Config.HF_TOKEN)
 
     root_path = Path(__file__).resolve().parent.parent
 
     app = Flask(__name__, template_folder=str(root_path / 'templates'))
-
-    app.config.from_object(config_class)
 
     CORS(app)
 

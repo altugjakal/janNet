@@ -1,3 +1,4 @@
+import logging
 import os
 
 import torch
@@ -7,6 +8,8 @@ import numpy as np
 import faiss
 from src.jannet.utils.thread_lock_wrapper import db_locked, vdb_locked
 from src.jannet.utils.config import Config
+
+logger = logging.getLogger(__name__)
 
 class VectorDB:
     def __init__(self, dimension=Config.MODEL_OUTPUT_DIM):
@@ -18,6 +21,8 @@ class VectorDB:
         else:
             self.device = torch.device("cpu")
 
+        self.model = get_model()
+
         try:
             self.index = faiss.read_index("index/index.index")
         except (FileNotFoundError, RuntimeError):
@@ -25,30 +30,13 @@ class VectorDB:
             self.index = faiss.IndexIDMap2(self.base_index)
 
     @vdb_locked
-    def insert(self, text: str, id: int) -> bool:
+    def insert(self, text: str, id: int) -> None:
         vector = self.vectorise_text(text)
 
         vector = np.array([vector]).astype('float32')
         id = np.array([id], dtype='int64')
-        try:
 
-            self.index.add_with_ids(vector, id)
-            return True
-
-        except Exception as e:
-            print(e)
-            return False
-
-    @vdb_locked
-    def delete(self, id: int) -> bool:
-        id_to_remove = np.array([id], dtype='int64')
-        try:
-            self.index.remove_ids(id_to_remove)
-            return True
-
-        except Exception as e:
-            print(e)
-            return False
+        self.index.add_with_ids(vector, id)
 
 
 
@@ -67,13 +55,13 @@ class VectorDB:
 
 
     def vectorise_text(self, text: str) -> np.ndarray:
-        model = get_model()
+        model = self.model
         vector = model.encode(text)
         return vector / np.linalg.norm(vector)
 
 
     def tokenize_text(self, text: str) -> np.ndarray:
-        model = get_model()
+        model = self.model
         encoded = model.tokenizer(
             text,
             padding=True,
@@ -85,19 +73,16 @@ class VectorDB:
             output = model[0].auto_model(**encoded)
 
         token_embeddings = output.last_hidden_state
-        attention_mask = encoded['attention_mask']
 
         return token_embeddings
 
-    def save_to_disk(self) -> bool:
+    def save_to_disk(self) -> None:
         current_dir = os.path.dirname(os.path.abspath(__file__))
 
         index_path = os.path.normpath(os.path.join(current_dir, "..", "..", "index", "index.index"))
 
-        try:
-            faiss.write_index(self.index, index_path)
-            return True
-        except (FileNotFoundError, RuntimeError):
-            return False
+
+        faiss.write_index(self.index, index_path)
+
 
 

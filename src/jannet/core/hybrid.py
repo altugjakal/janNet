@@ -1,9 +1,13 @@
+import logging
+
 from src.jannet.core.lexical_search import LexicalSearch
 from src.jannet.core.semantic_search import SemanticSearch
 from src.jannet.utils.config import Config
 from src.jannet.core.maxsim import MaxSim
 from src.jannet.utils.parsing import html_to_clean, get_tld, get_domain
 from src.jannet.utils.timer_wrapper import timed
+
+logger = logging.getLogger(__name__)
 
 
 class HybridSearch:
@@ -41,21 +45,21 @@ class HybridSearch:
         v_search_instance = self.v_search_instance
         kw_search_instance = self.kw_search_instance
 
-        print("[hybrid] starting vector search")
+        logger.info("Starting semantic search")
         vector_scores = v_search_instance.search(term)
-        print("[hybrid] vector search done")
+        logger.info("Semantic search completed")
 
-        print("[hybrid] starting keyword search")
+        logger.info("Starting lexical search")
         keyword_scores = kw_search_instance.search(term)
-        print("[hybrid] keyword search done")
+        logger.info("Lexical search completed")
 
         k_set = (keyword_scores or {}).keys()
         v_set = (vector_scores or {}).keys()
         all_ids = set(k_set | v_set)
 
         if len(all_ids) == 0:
+            logger.info("No search results found")
             return [], []
-
 
         all_contents = self.db.get_contents_by_ids(all_ids)
 
@@ -67,56 +71,60 @@ class HybridSearch:
             mx = max(scores.values())
             mn = min(scores.values())
             if mx == mn:
-                return {id: 1.0 for id in scores}
-            return {id: (s - mn) / (mx - mn) for id, s in scores.items()}
+                return {doc_id: 1.0 for doc_id in scores}
+            return {
+                doc_id: (score - mn) / (mx - mn)
+                for doc_id, score in scores.items()
+            }
 
         keyword_scores = normalize(keyword_scores)
         vector_scores = normalize(vector_scores)
 
-
-        print("[hybrid] starting pagerank fetch")
+        logger.info("Fetching PageRank scores")
         if Config.PAGERANK_CALCULATION:
             pagerank_scores = self.db.get_pagerank_scores_batch(all_ids)
-        print("[hybrid] pagerank fetch done")
+        logger.info("PageRank fetch completed")
 
-        print("[hybrid] starting score combination")
+        logger.info("Combining ranking scores")
         combined_scores = {}
-        for id in all_ids:
-            kw = keyword_scores.get(id, 0)
-            vec = vector_scores.get(id, 0)
-            pr = pagerank_scores.get(id, 0) if Config.PAGERANK_CALCULATION else 0
-
+        for doc_id in all_ids:
+            kw = keyword_scores.get(doc_id, 0)
+            vec = vector_scores.get(doc_id, 0)
+            pr = pagerank_scores.get(doc_id, 0) if Config.PAGERANK_CALCULATION else 0
 
             if kw + vec < Config.SCORE_FILTER:
-                print(f"[hybrid] Skipping {id}")
+                logger.debug("Filtered document %d", doc_id)
                 continue
 
             combined_score = (kw_weight * kw + vector_weight * vec) * (1 + pr)
-            combined_scores[id] = combined_score
-        print("[hybrid] score combination done")
+            combined_scores[doc_id] = combined_score
 
+        logger.info("Score combination completed")
 
+        sorted_urls = sorted(
+            combined_scores.items(),
+            key=lambda x: x[1],
+            reverse=True
+        )[:Config.FIRST_POOL_SIZE]
 
-        sorted_urls = sorted(combined_scores.items(), key=lambda x: x[1], reverse=True)[:Config.FIRST_POOL_SIZE]
-        for id, score in sorted_urls:
+        for doc_id, score in sorted_urls:
             try:
-                clean_sorted_contents[id] = html_to_clean(all_contents[id])
-                print(f"Passed: {id}")
+                clean_sorted_contents[doc_id] = html_to_clean(all_contents[doc_id])
+                logger.debug("Prepared document %d for MaxSim", doc_id)
             except KeyError:
-                print(f"Failed: {id}")
+                logger.warning("Missing content for document %d", doc_id)
                 continue
 
-        print("[hybrid] starting maxsim")
+        logger.info("Starting MaxSim reranking")
         maxsim_scores = self.maxsim_instance.calculate(term, clean_sorted_contents)
-        print("[hybrid] maxsim done")
+        logger.info("MaxSim reranking completed")
 
         id_by_url = {}
         final_scores_by_url = {}
 
-        for s_id, url in self.db.get_url_from_ids(maxsim_scores.keys()):
-            id_by_url[url] = s_id
-            final_scores_by_url[url] = maxsim_scores[s_id]
-
+        for doc_id, url in self.db.get_url_from_ids(maxsim_scores.keys()):
+            id_by_url[url] = doc_id
+            final_scores_by_url[url] = maxsim_scores[doc_id]
 
         final_sorted_urls = sorted(
             final_scores_by_url.items(),
@@ -124,22 +132,34 @@ class HybridSearch:
             reverse=True
         )
 
-
-
-        print(f"\nHybrid search for '{term}' (KW: {kw_weight}, Vec: {vector_weight})")
-        print(f"Found: {len(keyword_scores)} keyword, {len(vector_scores)} vector, {len(all_ids)} total")
-        print("\nTop results:")
+        logger.info(
+            "Hybrid search '%s': %d lexical, %d semantic, %d total candidates",
+            term,
+            len(keyword_scores),
+            len(vector_scores),
+            len(all_ids),
+        )
 
         return_urls = []
         return_contents = []
 
-        for i, (url, score) in enumerate(final_sorted_urls, 1):
-            s_id = id_by_url[url]
-            kw = keyword_scores.get(s_id, 0)
-            vec = vector_scores.get(s_id, 0)
-            print(f"{i}. {url}")
-            print(f"   Final Pool Score: {score:.3f} Initial Pool Values: (KW: {kw:.3f}, Vec: {vec:.3f})")
+        for rank, (url, score) in enumerate(final_sorted_urls, 1):
+            doc_id = id_by_url[url]
+            kw = keyword_scores.get(doc_id, 0)
+            vec = vector_scores.get(doc_id, 0)
+
+            logger.info(
+                "#%d %s | final=%.3f kw=%.3f vec=%.3f",
+                rank,
+                url,
+                score,
+                kw,
+                vec,
+            )
+
             return_urls.append(url)
-            return_contents.append(all_contents[s_id])
+            return_contents.append(all_contents[doc_id])
+
+        logger.info("Returning %d results", len(return_urls))
 
         return return_urls, return_contents

@@ -10,7 +10,7 @@ class ReverseIndexCommunicator:
         self.index_url = Config.CORNET_URL
 
 
-    def insert(self, docId, token_map):
+    def insert(self, doc_id, token_map):
         full_url = self.index_url + 'insert'
 
         structured_map = {}
@@ -24,23 +24,21 @@ class ReverseIndexCommunicator:
             ]
 
 
-        json = {
-        "docId": docId,
+        payload = {
+        "docId": doc_id,
         "pairs": structured_map,
         }
 
 
-        make_postr(full_url, json)
+        make_postr(full_url, payload)
 
-    def commit(self) -> bool:
+    def commit(self) -> None:
         full_url = self.index_url + 'commit'
-        json = {
+        payload = {
 
         }
 
-        make_postr(full_url, json)
-        return True
-
+        make_postr(full_url, payload)
     def search(self, query: str) -> Any:
 
         full_term = ' '.join(query)
