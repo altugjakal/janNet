@@ -15,7 +15,7 @@ A hybrid search engine combining traditional keyword matching with neural vector
 - [x] Depth-aware ranking
 - [x] MaxSim re-ranking (late-interaction scoring)
 - [x] Handle multiple passages (getting the most relevant passage)
-- [ ] Domain authority signals
+- [X] Domain authority signals
 - [ ] Distributed system adaptation
 - [x] Web UI
 - [x] API endpoints
