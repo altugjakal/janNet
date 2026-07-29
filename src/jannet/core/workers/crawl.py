@@ -18,7 +18,9 @@ def crawl(thread_id, vdb, rc, db):
         thread_id=thread_id
     )
 
+
     if db.get_queue_size(thread_id=thread_id) == 0:
+
         db.add_to_queue_batch(
             [(hash(url) % (10 ** 9), url) for url in Config.SEED_URLS[thread_id]],
             thread_id
@@ -38,8 +40,11 @@ def crawl(thread_id, vdb, rc, db):
             url = queue[0]
             id = queue[1]
 
-            crawler.crawl(url, id)
-            crawl_count += 1
+
+            is_crawled = crawler.crawl(url, id)
+
+            if is_crawled:
+                crawl_count += 1
 
         except Exception:
             logger.exception("Thread %d: crawler iteration failed", thread_id)

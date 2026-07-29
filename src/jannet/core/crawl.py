@@ -5,7 +5,6 @@ import time
 from protego import Protego
 
 from src.jannet.utils.config import Config
-from src.jannet.managers.db_manager import get_db, get_vdb
 from src.jannet.utils.parsing import get_url_root, get_domain
 from src.jannet.utils.misc import  make_getr
 
@@ -13,7 +12,7 @@ from src.jannet.utils.misc import  make_getr
 logger = logging.getLogger(__name__)
 
 class Crawl:
-    def __init__(self, sleep_median, sleep_padding, db=get_db(), vdb=get_vdb(), rc=None, thread_id=None):
+    def __init__(self, sleep_median, sleep_padding, db, vdb, rc, thread_id):
         self.sleep_median = sleep_median
         self.sleep_padding = sleep_padding
         self.db = db
@@ -21,7 +20,7 @@ class Crawl:
         self.thread_id = thread_id
         self.rc = rc
 
-    def crawl(self, url, id):
+    def crawl(self, url: str, id: int) -> bool:
         sleep_median = self.sleep_median
         sleep_padding = self.sleep_padding
 
@@ -30,13 +29,13 @@ class Crawl:
         if self.db.is_url_visited(url):
             logger.info("Thread %d: %s already visited", self.thread_id, url)
             self.db.drop_from_queue(url, thread_id=self.thread_id)
-            return
+            return False
 
 
         try:
             is_allowed, delay = self.rc.check(domain, url)
             if not is_allowed:
-                return
+                return False
         except KeyError:
             delay = None
             disallowed_pages = []
@@ -56,7 +55,7 @@ class Crawl:
                 if not can_fetch:
                     self.db.drop_from_queue(url, thread_id=self.thread_id)
                     logger.warning("Thread %d: blocked by robots.txt: %s", self.thread_id, url)
-                    return
+                    return False
 
                 logger.info("Thread %d: robots.txt OK for: %s", self.thread_id, url)
             except Exception as e:
@@ -73,12 +72,12 @@ class Crawl:
         except Exception as e:
             logger.exception("Thread %d: crawl failed for %s", self.thread_id, url)
             self.db.drop_from_queue(url, thread_id=self.thread_id)
-            return
+            return False
 
         self.db.drop_from_queue(url, thread_id=self.thread_id)
         if not content:
             logger.warning("Thread %d: Empty content", self.thread_id)
-            return
+            return False
 
         self.db.add_url(id, url, content)
         logger.info("Thread %d: stored %s", self.thread_id, url)
@@ -87,3 +86,4 @@ class Crawl:
         sleep_time = delay if delay else (sleep_median + random.uniform(-sleep_padding, sleep_padding))
         logger.info("Thread %d: sleeping %.2fs", self.thread_id, sleep_time)
         time.sleep(sleep_time)
+        return True

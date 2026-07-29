@@ -1,9 +1,9 @@
-from src.jannet.managers.db_manager import get_vdb
+
 from src.jannet.utils.timer_wrapper import timed
 
 
 class MaxSim:
-    def __init__(self, vdb=get_vdb()):
+    def __init__(self, vdb):
         self.vdb = vdb
 
     @timed

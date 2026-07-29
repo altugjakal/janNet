@@ -22,7 +22,7 @@ class HybridSearch:
         self.db = db
         self.v_search_instance = SemanticSearch(vdb=self.vdb, db=self.db)
         self.kw_search_instance = LexicalSearch(self.db)
-        self.maxsim_instance = MaxSim()
+        self.maxsim_instance = MaxSim(vdb=self.vdb)
 
     def get_tld_rank(self, url, importance):
 

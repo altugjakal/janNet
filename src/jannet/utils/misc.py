@@ -1,3 +1,4 @@
+import logging
 import re
 import requests
 from src.jannet.utils.parsing import reformat_html_tags, html_to_clean
@@ -5,7 +6,7 @@ from nltk.stem import PorterStemmer
 from nltk.corpus import stopwords
 
 stop_words = set(stopwords.words('english'))
-
+logger = logging.getLogger(__name__)
 
 def extract_words(text):
     stemmer = PorterStemmer()
@@ -39,8 +40,8 @@ def make_getr(url):
         return response
 
     except requests.RequestException as e:
-        print(f"Request failed for {url}: {e}")
-        raise
+        logger.warning(f"Request failed for {url}: {e}")
+
 
 def make_postr(url, json):
     url = url.strip()
@@ -56,8 +57,8 @@ def make_postr(url, json):
         return response
 
     except requests.RequestException as e:
-        print(f"Request failed for {url}: {e}")
-        raise
+        logger.warning(f"Request failed for {url}: {e}")
+
 
 
 
@@ -69,7 +70,7 @@ def site_details(url=None, content=None):  #extract details from the given conte
             content = response.text
 
         except requests.RequestException as e:
-            print(f"Request failed for {url}")
+            logger.info(f"Request failed for {url}")
             return "No title available", "No description available", "No content available"
 
     if content:

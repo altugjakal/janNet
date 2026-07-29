@@ -1,16 +1,16 @@
+import os
 from pathlib import Path
 
 from flask import Flask
 from flask_cors import CORS
-from huggingface_hub import login
-
 from src.jannet.utils.config import Config
 from api.routes.search import search_bp
 
 
 def create_app():
 
-    login(token=Config.HF_TOKEN)
+
+
 
     root_path = Path(__file__).resolve().parent.parent
 

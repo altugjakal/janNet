@@ -1,7 +1,10 @@
 import concurrent
-
 from concurrent.futures import ThreadPoolExecutor
+from huggingface_hub import login
+from src.jannet.utils.config import Config
+from src.jannet.utils import logging_config # noqa
 
+login(token=Config.HF_TOKEN)
 
 from src.jannet.core.process.queuers.process_queuer import ProcessQueuer
 from src.jannet.core.process.reverse_index import ReverseIndexCommunicator
@@ -9,13 +12,11 @@ from src.jannet.core.process.robots_cache import RobotsCache
 from src.jannet.core.workers.crawl import crawl
 from src.jannet.core.workers.process import process
 from src.jannet.managers.db_manager import get_vdb, get_db
-from src.jannet.utils.config import Config
-
-
 vdb = get_vdb()
 rc = RobotsCache(100)
 db = get_db()
 pc = ProcessQueuer(db)
+
 
 if __name__ == "__main__":
 

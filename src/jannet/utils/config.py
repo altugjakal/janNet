@@ -1,6 +1,6 @@
 class Config:
 
-    MODEL = 'google/embeddinggemma-300m'
+    MODEL = 'sentence-transformers/msmarco-distilbert-dot-v5'
     MODEL_OUTPUT_DIM = 768
     VECTOR_WEIGHT = 0.4
     LEXICAL_WEIGHT = 0.6
@@ -51,7 +51,7 @@ class Config:
 
     PAGERANK_CALCULATION= False
 
-    HF_TOKEN = "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"
+    HF_TOKEN = ""
 
     SLEEP_M = 0
     SLEEP_P = 0

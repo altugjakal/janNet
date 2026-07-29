@@ -6,11 +6,9 @@ from src.jannet.utils.thread_lock_wrapper import db_locked
 
 logger = logging.getLogger(__name__)
 
+
 class IndexDB:
     def __init__(self, host, user, password, database, port):
-
-
-
         self.config = {
             'host': host,
             'user': user,
@@ -23,38 +21,32 @@ class IndexDB:
             c = conn.cursor()
 
             try:
-
                 c.execute('''CREATE TABLE IF NOT EXISTS urls
-                             (id INTEGER PRIMARY KEY,
+                             (id INTEGER PRIMARY KEY AUTO_INCREMENT,
                              url VARCHAR(2048),
-                            url_hash CHAR(64) AS (SHA2(url, 256)) STORED ,
+                             url_hash CHAR(64) AS (SHA2(url, 256)) STORED,
                              content LONGTEXT NOT NULL,
-                            content_length INTEGER NOT NULL,
+                             content_length INTEGER NOT NULL,
                              processed BOOLEAN NOT NULL DEFAULT 0,
-                              crawled_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP)''')
+                             crawled_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP)''')
 
                 c.execute('''CREATE TABLE IF NOT EXISTS link_graph (
-        id INTEGER NOT NULL PRIMARY KEY AUTO_INCREMENT,
-        from_url_id INTEGER,
-        to_url_id INTEGER,
-        crawled_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-    );''')
+                             id INTEGER NOT NULL PRIMARY KEY AUTO_INCREMENT,
+                             from_url_id INTEGER,
+                             to_url_id INTEGER,
+                             crawled_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP)''')
 
                 c.execute('''CREATE TABLE IF NOT EXISTS pagerank_scores (
                              id INTEGER NOT NULL PRIMARY KEY,
                              score DOUBLE NOT NULL,
-                             added_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP)
-                    
-                
-                ''')
+                             added_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP)''')
 
                 c.execute('''CREATE TABLE IF NOT EXISTS queue
-                
-                             (url VARCHAR(2048),
+                             (id INTEGER NOT NULL PRIMARY KEY AUTO_INCREMENT,
+                             url VARCHAR(2048),
                              url_hash CHAR(64) AS (SHA2(url, 256)) STORED,
-                             id INTEGER NOT NULL PRIMARY KEY,
                              issuer_thread_id INTEGER NOT NULL,
-                              added_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP)''')
+                             added_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP)''')
 
                 c.execute('''CREATE TABLE IF NOT EXISTS domains
                              (domain VARCHAR(512) PRIMARY KEY,
@@ -68,26 +60,34 @@ class IndexDB:
                              )''')
 
 
+                indexes = [
 
-                c.execute('CREATE INDEX idx_queue_url_hash ON queue(url_hash);')
-
-                c.execute('CREATE INDEX idx_urls_url_hash ON urls(url_hash);')
-
-                c.execute('CREATE INDEX idx_urls_url ON urls(url);')
-
-                c.execute('CREATE INDEX idx_urls_id ON urls(id);')
-
-                c.execute('CREATE INDEX idx_vector_id ON vector_index(id);')
+                    "CREATE INDEX idx_queue_url_hash ON queue(url_hash);",
 
 
+                    "CREATE INDEX idx_queue_thread_time ON queue(issuer_thread_id, added_at);",
 
 
-
-            except mysql.connector.errors.DatabaseError:
-                logger.error('Could not create indexes/tables.')
+                    "CREATE INDEX idx_urls_url_hash ON urls(url_hash);",
 
 
+                    "CREATE INDEX idx_urls_processed ON urls(processed);",
 
+
+                    "CREATE INDEX idx_vector_embedding ON vector_index(embedding_id);"
+                ]
+
+                for query in indexes:
+                    try:
+                        c.execute(query)
+                    except mysql.connector.errors.ProgrammingError as e:
+                        if e.errno != 1061:
+                            raise e
+
+            except mysql.connector.Error as e:
+                logger.error(f'Could not create indexes/tables: {e}')
+                logger.exception(e)
+                raise e
 
             conn.commit()
 
@@ -106,7 +106,8 @@ class IndexDB:
         with self.open_db() as conn:
             c = conn.cursor()
 
-            c.execute('''INSERT INTO urls (id, url, content, content_length) VALUES (%s, %s, %s, %s)''', (id, url, content, len(content.split())))
+            c.execute('''INSERT INTO urls (id, url, content, content_length) VALUES (%s, %s, %s, %s)''',
+                      (id, url, content, len(content.split())))
             conn.commit()
 
     @db_locked
@@ -145,12 +146,12 @@ class IndexDB:
             c.execute('''SELECT url FROM urls WHERE url_hash = SHA2(%s, 256)''', (url,))
             return c.fetchone() is not None
 
-
     @db_locked
     def add_to_queue(self, id, url, thread_id):
         with self.open_db() as conn:
             c = conn.cursor()
-            c.execute('''INSERT IGNORE INTO queue (id, url, issuer_thread_id) VALUES (%s, %s, %s)''', (id, url, thread_id))
+            c.execute('''INSERT IGNORE INTO queue (id, url, issuer_thread_id) VALUES (%s, %s, %s)''',
+                      (id, url, thread_id))
             conn.commit()
 
     @db_locked
@@ -162,9 +163,6 @@ class IndexDB:
                 [(id, url, thread_id) for id, url in pairs]
             )
             conn.commit()
-
-
-
 
     @db_locked
     def get_total_url_count(self):
@@ -184,14 +182,16 @@ class IndexDB:
     def drop_from_queue(self, url, thread_id):
         with self.open_db() as conn:
             c = conn.cursor()
-            c.execute('''DELETE FROM queue WHERE url_hash = SHA2(%s, 256) AND issuer_thread_id = %s''', (url, thread_id))
+            c.execute('''DELETE FROM queue WHERE url_hash = SHA2(%s, 256) AND issuer_thread_id = %s''',
+                      (url, thread_id))
             conn.commit()
 
     @db_locked
     def is_in_queue(self, url, thread_id):
         with self.open_db() as conn:
             c = conn.cursor()
-            c.execute('''SELECT url FROM queue WHERE url_hash = SHA2(%s, 256) AND issuer_thread_id = %s''', (url, thread_id))
+            c.execute('''SELECT url FROM queue WHERE url_hash = SHA2(%s, 256) AND issuer_thread_id = %s''',
+                      (url, thread_id))
             return c.fetchone() is not None
 
     @db_locked
@@ -204,6 +204,7 @@ class IndexDB:
             result = c.fetchone()
             conn.commit()
             return result if result else []
+
     @db_locked
     def add_domain(self, domain):
         with self.open_db() as conn:
@@ -225,14 +226,12 @@ class IndexDB:
             c.execute('''SELECT domain FROM domains''')
             return c.fetchall()
 
-
     @db_locked
     def manage_vector_for_index_batch(self, pairs):
         with self.open_db() as conn:
             c = conn.cursor()
             c.executemany('''INSERT INTO vector_index (id, embedding_id) VALUES (%s, %s)''', pairs)
             conn.commit()
-
 
     @db_locked
     def get_id_by_vector_id_batch(self, vector_ids):
@@ -253,11 +252,6 @@ class IndexDB:
                 ids.append(id)
 
             return emb_ids, ids
-
-
-
-
-
 
     @db_locked
     def get_contents_by_ids(self, ids):
@@ -290,10 +284,9 @@ class IndexDB:
             c = conn.cursor()
             c.executemany(
                 '''INSERT INTO link_graph (to_url_id, from_url_id) VALUES (%s, %s)''',
-            pairs
+                pairs
             )
             conn.commit()
-
 
     def get_all_link_relation(self):
         with self.open_db() as conn:
@@ -315,24 +308,19 @@ class IndexDB:
             placeholders = ','.join(['%s'] * len(ids))
             s_map = {id: 0 for id in ids}
 
-
             c.execute(
                 f'''SELECT urls.id, pagerank_scores.score
             FROM urls
                      LEFT JOIN pagerank_scores ON pagerank_scores.id = urls.id
-            WHERE urls.id IN ({ placeholders })''', tuple(ids)
+            WHERE urls.id IN ({placeholders})''', tuple(ids)
             )
 
             results = c.fetchall()
 
-
             for id, pagerank_score in results:
-
                 s_map[id] = pagerank_score if pagerank_score else 0
 
-
             return s_map
-
 
     def get_url_from_ids(self, ids):
         placeholders = ', '.join(['%s'] * len(ids))
