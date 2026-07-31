@@ -1,13 +1,7 @@
-version: '3.8'
+
+
 
 services:
-  cornet-backend:
-    build:
-      context: ../corNet
-    ports:
-      - "7777:7777"
-    restart: always
-
   web:
     build: .
     command: gunicorn --bind 0.0.0.0:8080 --workers 4 wsgi:app
@@ -19,3 +13,11 @@ services:
     build: .
     command: python main.py
     restart: always
+    
+  cornet-backend:
+    build:
+      context: ../corNet
+    ports:
+      - "7777:7777"
+    restart: always
+
