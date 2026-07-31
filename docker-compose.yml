@@ -1,0 +1,14 @@
+version: '3.8'
+
+services:
+  web:
+    build: .
+    command: gunicorn --bind 0.0.0.0:8080 --workers 4 wsgi:app
+    ports:
+      - "8080:8080"
+    restart: always
+
+  engine:
+    build: .
+    command: python main.py
+    restart: always
