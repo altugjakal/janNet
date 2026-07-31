@@ -1,4 +1,8 @@
+import os
+from dotenv import load_dotenv
+
 class Config:
+    load_dotenv()
 
     MODEL = 'sentence-transformers/msmarco-distilbert-dot-v5'
     MODEL_OUTPUT_DIM = 768
@@ -22,11 +26,11 @@ class Config:
 
     FIRST_POOL_SIZE = 10
 
-    DB_PASSWORD = 'altug1601'
-    DB_USER = 'altug'
-    DB_DATABASE = 'defaultdb'
-    DB_PORT = 3306
-    DB_HOST = 'localhost'
+    DB_PASSWORD = os.getenv('DB_PASSWORD')
+    DB_USER = os.getenv('DB_USER')
+    DB_DATABASE = os.getenv('DB_DATABASE')
+    DB_PORT = os.getenv('DB_PORT')
+    DB_HOST = os.getenv('DB_HOST')
 
     HTML_IMPORTANCE_MAP = {
         "title": 10,
@@ -51,7 +55,7 @@ class Config:
 
     PAGERANK_CALCULATION= False
 
-    HF_TOKEN = ""
+    HF_TOKEN = os.getenv('HF_TOKEN')
 
     SLEEP_M = 0
     SLEEP_P = 0
