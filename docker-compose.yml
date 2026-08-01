@@ -10,7 +10,8 @@ services:
   engine:
     build: .
     command: python main.py
-    restart: always
+    restart: no
+
 
   cornet-backend:
     build:
