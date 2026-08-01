@@ -1,6 +1,4 @@
 
-
-
 services:
   web:
     build: .
@@ -13,7 +11,7 @@ services:
     build: .
     command: python main.py
     restart: always
-    
+
   cornet-backend:
     build:
       context: ../corNet
