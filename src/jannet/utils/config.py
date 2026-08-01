@@ -22,7 +22,7 @@ class Config:
     RETURN_LIMIT = 10
     SCORE_FILTER = 0.000
 
-    CORNET_URL = 'http://localhost:7777/'
+    CORNET_URL = 'http://cornet-backend:7777/'
 
     FIRST_POOL_SIZE = 10
 
@@ -63,7 +63,7 @@ class Config:
     SEED_URLS = [
         ["https://en.wikipedia.org/wiki/Information_retrieval"],
         ["https://en.wikipedia.org/wiki/Computer_science"],
-        ["https://www.britannica.com/science/computer-science"],
+        ["https://en.wikipedia.org/wiki/Electrical_engineering"],
     ]
 
     CRAWL_THREAD_COUNT = 3
