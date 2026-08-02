@@ -16,8 +16,8 @@ class Config:
     AUTHORITIVE_MULT = 1.0
     GENERIC_MULT = 0.7
     EDU_MULT = 2.0
-    MAX_CRAWLS = 60
-    MAX_PROCESS = 50
+    MAX_CRAWLS = 650
+    MAX_PROCESS = 500
 
     RETURN_LIMIT = 10
     SCORE_FILTER = 0.000
@@ -64,10 +64,41 @@ class Config:
         ["https://en.wikipedia.org/wiki/Information_retrieval"],
         ["https://en.wikipedia.org/wiki/Computer_science"],
         ["https://en.wikipedia.org/wiki/Electrical_engineering"],
+        [
+            "https://eecs.berkeley.edu",
+            "https://cs.stanford.edu",
+            "https://eecs.mit.edu",
+            "https://cs.cmu.edu",
+            "https://cs.harvard.edu",
+            "https://cs.princeton.edu",
+            "https://cs.cornell.edu",
+            "https://cs.ucla.edu",
+            "https://cs.washington.edu",
+            "https://cs.illinois.edu",
+            "https://cse.ucsd.edu",
+            "https://cms.caltech.edu",
+            "https://cs.ox.ac.uk",
+            "https://cst.cam.ac.uk"
+        ],
+        [
+            "https://arxiv.org/archive/cs",
+            "https://dl.acm.org",
+            "https://ieeexplore.ieee.org",
+            "https://dblp.org",
+            "https://paperswithcode.com",
+            "https://openreview.net",
+            "https://www.semanticscholar.org",
+            "https://scholar.google.com",
+            "https://github.com",
+            "https://www.kaggle.com",
+            "https://news.ycombinator.com"
+        ]
+
+
     ]
 
-    CRAWL_THREAD_COUNT = 3
-    PROCESS_THREAD_COUNT = 3
+    CRAWL_THREAD_COUNT = 5
+    PROCESS_THREAD_COUNT = 5
     assert len(SEED_URLS) == CRAWL_THREAD_COUNT
 
     DESIGN_FILE_EXTS = (".png", ".jpg", ".jpeg", ".ico", ".webp", ".svg", ".css", ".docx")
