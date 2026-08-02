@@ -7,19 +7,17 @@ class SemanticSearch:
         self.vdb = vdb
 
     def search(self, term):
-        t0 = time.perf_counter()
 
-        t1 = time.perf_counter()
         term_vector = self.vdb.vectorise_text(term)
         vectors = self.vdb.euclidian_d(term_vector)
 
-        t2 = time.perf_counter()
+
 
         id_scores = {}
         vector_ids = tuple([v['id'] for v in vectors])
         emb_ids, ids = self.db.get_id_by_vector_id_batch(vector_ids)
 
-        t3 = time.perf_counter()
+
         score_by_vector_id = {
             vector["id"]: vector["score"]
             for vector in vectors
