@@ -40,6 +40,19 @@ class HybridSearch:
 
     @timed
     def combined_search(self, term):
+
+        def normalize(scores):
+            if not scores:
+                return {}
+            mx = max(scores.values())
+            mn = min(scores.values())
+            if mx == mn:
+                return {doc_id: 1.0 for doc_id in scores}
+            return {
+                doc_id: (score - mn) / (mx - mn)
+                for doc_id, score in scores.items()
+            }
+
         vector_weight = self.vector_weight
         kw_weight = self.kw_weight
         v_search_instance = self.v_search_instance
@@ -60,22 +73,6 @@ class HybridSearch:
         if len(all_ids) == 0:
             logger.info("No search results found")
             return [], []
-
-        all_contents = self.db.get_contents_by_ids(all_ids)
-
-        clean_sorted_contents = {}
-
-        def normalize(scores):
-            if not scores:
-                return {}
-            mx = max(scores.values())
-            mn = min(scores.values())
-            if mx == mn:
-                return {doc_id: 1.0 for doc_id in scores}
-            return {
-                doc_id: (score - mn) / (mx - mn)
-                for doc_id, score in scores.items()
-            }
 
         keyword_scores = normalize(keyword_scores)
         vector_scores = normalize(vector_scores)
@@ -101,13 +98,18 @@ class HybridSearch:
 
         logger.info("Score combination completed")
 
-        sorted_urls = sorted(
+        sorted_ids = sorted(
             combined_scores.items(),
             key=lambda x: x[1],
             reverse=True
         )[:Config.FIRST_POOL_SIZE]
 
-        for doc_id, score in sorted_urls:
+
+        all_contents = self.db.get_contents_by_ids([doc_id for doc_id, _ in sorted_ids])
+
+        clean_sorted_contents = {}
+
+        for doc_id, score in sorted_ids:
             try:
                 clean_sorted_contents[doc_id] = html_to_clean(all_contents[doc_id])
                 logger.debug("Prepared document %d for MaxSim", doc_id)
