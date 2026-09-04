@@ -1,9 +1,9 @@
 import logging
 
-from src.jannet.core.lexical_search import LexicalSearch
-from src.jannet.core.semantic_search import SemanticSearch
+from src.jannet.core.search.lexical_search import LexicalSearch
+from src.jannet.core.search.semantic_search import SemanticSearch
 from src.jannet.utils.config import Config
-from src.jannet.core.maxsim import MaxSim
+from src.jannet.core.search.maxsim import MaxSim
 from src.jannet.utils.parsing import html_to_clean, get_tld, get_domain
 from src.jannet.utils.timer_wrapper import timed
 
@@ -93,6 +93,7 @@ class HybridSearch:
                 logger.debug("Filtered document %d", doc_id)
                 continue
 
+            print(pr)
             combined_score = (kw_weight * kw + vector_weight * vec) * (1 + pr)
             combined_scores[doc_id] = combined_score
 

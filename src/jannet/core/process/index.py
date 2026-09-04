@@ -1,3 +1,4 @@
+import gc
 import hashlib
 import logging
 import random
@@ -99,8 +100,12 @@ class Index:
             chunk = ' '.join(words[i:i + 400])
             combined_string = f"{id}:{i}"
             chunk_id = int.from_bytes(hashlib.md5(combined_string.encode('utf-8')).digest(), byteorder='big') % (10 ** 9)
-
             self.vdb.insert(text=chunk, id=chunk_id)
+            del chunk
+            del combined_string
+            if i % 40000 == 0:
+                gc.collect()
+
             id_emb_pairs.add((id, chunk_id))  #use doc id
         logger.info("VDB chunk insert (%d chunks): %.3fs", len(id_emb_pairs), time.perf_counter() - t6)
 

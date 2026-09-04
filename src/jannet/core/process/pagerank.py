@@ -56,5 +56,3 @@ class PageRank:
             traceback.print_exc()
 
 
-pg = PageRank(db=get_db(), vdb=get_vdb(), d=0.85)
-pg.map_pagerank()

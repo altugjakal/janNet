@@ -1,6 +1,7 @@
 import logging
 from time import sleep
 
+from src.jannet.core.process.pagerank import PageRank
 from src.jannet.core.process.index import Index
 from src.jannet.utils.config import Config
 
@@ -34,6 +35,10 @@ def process(vdb, db, pc):
         except Exception:
             logger.exception("Processing iteration failed")
             sleep(5)
+
+    if Config.PAGERANK_CALCULATION:
+        pg = PageRank(db=db, vdb=vdb, d=0.85)
+        pg.map_pagerank()
 
     logger.info(
         "Process queue completed after %d iterations",
