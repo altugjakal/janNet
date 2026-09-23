@@ -1,7 +1,7 @@
 import logging
 from time import sleep
 
-from src.jannet.core.crawl import Crawl
+from src.jannet.core.crawl.crawl import Crawl
 from src.jannet.utils.config import Config
 
 logger = logging.getLogger(__name__)
