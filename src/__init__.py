@@ -1,9 +1,10 @@
-import os
+
 from pathlib import Path
 
 from flask import Flask
 from flask_cors import CORS
 from src.jannet.utils.config import Config
+from api.routes.control import control_bp
 from api.routes.search import search_bp
 
 
@@ -19,5 +20,6 @@ def create_app():
     CORS(app)
 
     app.register_blueprint(search_bp, url_prefix='/search')
+    app.register_blueprint(control_bp, url_prefix='/control')
 
     return app
