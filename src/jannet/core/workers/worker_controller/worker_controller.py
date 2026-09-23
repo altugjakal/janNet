@@ -35,6 +35,7 @@ class WorkerController:
         with self.crawl_thread_pool_executor as exe:
             for t_id in range(Config.CRAWL_THREAD_COUNT):
                 self.process_futures.append(exe.submit(crawl, t_id, self.vdb, self.rc, self.db))
+
                 concurrent.futures.wait(self.crawl_futures)
                 self.stop_crawl_workers()
 
