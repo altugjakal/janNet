@@ -16,8 +16,8 @@ class Config:
     AUTHORITIVE_MULT = 1.0
     GENERIC_MULT = 0.7
     EDU_MULT = 2.0
-    MAX_CRAWLS = 650
-    MAX_PROCESS = 500
+    MAX_CRAWLS = -1
+    MAX_PROCESS = -1
 
     RETURN_LIMIT = 10
     SCORE_FILTER = 0.000

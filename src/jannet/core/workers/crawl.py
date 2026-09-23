@@ -28,7 +28,7 @@ def crawl(thread_id, vdb, rc, db):
 
     crawl_count = 0
 
-    while crawl_count < Config.MAX_CRAWLS:
+    while crawl_count < Config.MAX_CRAWLS or Config.MAX_CRAWLS == -1:
         try:
             queue = db.get_queue_next(thread_id=thread_id)
 
@@ -39,7 +39,6 @@ def crawl(thread_id, vdb, rc, db):
 
             url = queue[0]
             id = queue[1]
-
 
             is_crawled = crawler.crawl(url, id)
 

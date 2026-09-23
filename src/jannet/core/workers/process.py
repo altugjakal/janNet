@@ -14,7 +14,7 @@ def process(vdb, db, pc):
 
     process_count = 0
 
-    while process_count < Config.MAX_PROCESS:
+    while process_count < Config.MAX_PROCESS or Config.MAX_PROCESS == -1:
         try:
             queue = pc.get()
 
