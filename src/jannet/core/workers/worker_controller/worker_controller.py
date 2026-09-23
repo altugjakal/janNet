@@ -22,22 +22,29 @@ class WorkerController:
         self.process_thread_pool_executor = ThreadPoolExecutor(Config.PROCESS_THREAD_COUNT)
 
 
-    def start_process_workers(self):
-        with self.process_thread_pool_executor as exe:
-            for _ in range(Config.PROCESS_THREAD_COUNT):
-                self.crawl_futures.append(exe.submit(process, self.vdb, self.db, self.pc))
-
-            concurrent.futures.wait(self.process_futures)
-            self.stop_crawl_workers()
+    def _start_process_workers(self):
+        exe = self.process_thread_pool_executor
+        for _ in range(Config.PROCESS_THREAD_COUNT):
+            self.process_futures.append(exe.submit(process, self.vdb, self.db, self.pc))
 
 
-    def start_crawl_workers(self):
-        with self.crawl_thread_pool_executor as exe:
-            for t_id in range(Config.CRAWL_THREAD_COUNT):
-                self.process_futures.append(exe.submit(crawl, t_id, self.vdb, self.rc, self.db))
 
-                concurrent.futures.wait(self.crawl_futures)
-                self.stop_crawl_workers()
+    def _start_crawl_workers(self):
+        exe = self.crawl_thread_pool_executor
+        for t_id in range(Config.CRAWL_THREAD_COUNT):
+            self.process_futures.append(exe.submit(crawl, t_id, self.vdb, self.rc, self.db))
+
+
+
+    def start_worker_pipeline(self):
+        self._start_process_workers()
+        self._start_crawl_workers()
+
+        futures = self.process_futures + self.crawl_futures
+        concurrent.futures.wait(futures)
+
+        self.stop_crawl_workers()
+        self.stop_process_workers()
 
     def stop_process_workers(self):
 

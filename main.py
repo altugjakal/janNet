@@ -19,8 +19,7 @@ if __name__ == "__main__":
     ri_client = ReverseIndexCommunicator()
     worker_controller = WorkerController(db, vdb)
     set_worker_controller(worker_controller)
-    worker_controller.start_process_workers()
-    worker_controller.start_crawl_workers()
+    worker_controller.start_worker_pipeline()
 
 
 
