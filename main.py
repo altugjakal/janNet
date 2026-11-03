@@ -8,7 +8,7 @@ from src.jannet.utils import logging_config # noqa
 
 login(token=Config.HF_TOKEN)
 
-from src.jannet.core.process.reverse_index import ReverseIndexCommunicator
+from src.jannet.core.process.reverse_index_communicator import ReverseIndexCommunicator
 from src.jannet.managers.db_manager import get_vdb, get_db
 vdb = get_vdb()
 db = get_db()

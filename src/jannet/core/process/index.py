@@ -8,7 +8,7 @@ from urllib.parse import urljoin
 
 from lxml import html
 
-from src.jannet.core.process.reverse_index import ReverseIndexCommunicator
+from src.jannet.core.process.reverse_index_communicator import ReverseIndexCommunicator
 from src.jannet.utils.config import Config
 from src.jannet.utils.misc import extract_words
 from src.jannet.utils.parsing import extract_anchors, html_to_clean

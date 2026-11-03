@@ -10,9 +10,6 @@ from api.routes.search import search_bp
 
 def create_app():
 
-
-
-
     root_path = Path(__file__).resolve().parent.parent
 
     app = Flask(__name__, template_folder=str(root_path / 'templates'))

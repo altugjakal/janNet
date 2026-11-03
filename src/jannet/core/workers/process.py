@@ -23,9 +23,9 @@ def process(vdb, db, pc):
                 sleep(10)
                 continue
 
-            url = queue[0]
-            content = queue[1]
-            doc_id = queue[2]
+            url = queue[0][0]
+            content = queue[0][1]
+            doc_id = queue[0][2]
 
             logger.info("Processing %s", url)
 

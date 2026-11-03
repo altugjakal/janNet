@@ -33,11 +33,14 @@ class ProcessQueuer:
                 time.sleep(1.0)
 
 
-    def get(self):
-        try:
-            return self.queue.get(timeout=1.0)
-        except queue.Empty:
-            return None
+    def get(self, spoon_size: int = 1):
+        items = []
+        for _ in range(spoon_size):
+            try:
+                items.append(self.queue.get(timeout=1.0))
+            except queue.Empty:
+                return None
+        return items
 
 
 

@@ -2,7 +2,7 @@ import concurrent
 from concurrent.futures import ThreadPoolExecutor
 
 from src.jannet.core.process.queuers.process_queuer import ProcessQueuer
-from src.jannet.core.process.reverse_index import ReverseIndexCommunicator
+from src.jannet.core.process.reverse_index_communicator import ReverseIndexCommunicator
 from src.jannet.core.process.robots_cache import RobotsCache
 from src.jannet.core.workers.crawl import crawl
 from src.jannet.core.workers.process import process
