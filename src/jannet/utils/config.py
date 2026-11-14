@@ -22,7 +22,7 @@ class Config:
     RETURN_LIMIT = 10
     SCORE_FILTER = 0.000
 
-    CORNET_URL = 'http://localhost:7777/'
+    CORNET_URL = 'http://cornet-backend:7777/'
 
     FIRST_POOL_SIZE = 10
 
