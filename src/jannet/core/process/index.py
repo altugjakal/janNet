@@ -21,13 +21,16 @@ class Index:
         self.vdb = vdb
         self.ri_client = ReverseIndexCommunicator()
 
-    def assign_importance_by_location(self, element_type: str) -> int:
-        base_importance = Config.HTML_IMPORTANCE_MAP.get(element_type, Config.HTML_DEFAULT_WEIGHT)
-        return base_importance
+        self.ri_client.configure_weights()
+
+
 
     def process(self, url: str, content: str, id: int) -> bool:
 
         t0 = time.perf_counter()
+        TAG_TO_ID = {
+            tag: idx for idx, tag in enumerate(Config.HTML_IMPORTANCE_MAP, start=1)
+        }
 
         t1 = time.perf_counter()
         anchors, anchor_values = extract_anchors(content)
@@ -79,9 +82,11 @@ class Index:
                 continue
             text_content = text_content.lower()
 
-            importance = self.assign_importance_by_location(e.tag)
+            field = TAG_TO_ID.get(e.tag)
+            if field is None:
+                continue
             for j, token in enumerate(text_content.split(" ")):
-                hit = (importance, pos_length + j)
+                hit = (field, pos_length + j)
                 token_map[token].append(hit)
 
             pos_length += len(e.text.split(" "))

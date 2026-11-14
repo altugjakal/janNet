@@ -10,6 +10,15 @@ class ReverseIndexCommunicator:
         self.index_url = Config.CORNET_URL
 
 
+
+    def configure_weights(self):
+        full_url = self.index_url + 'updateWeights'
+        payload = [
+            {"fieldId": idx, "fieldWeight": weight}
+            for idx, weight in enumerate(Config.HTML_IMPORTANCE_MAP.values(), start=1)
+        ]
+        make_postr(full_url, payload)
+
     def insert(self, doc_id, token_map):
         full_url = self.index_url + 'insert'
 
@@ -17,7 +26,7 @@ class ReverseIndexCommunicator:
         for token, hits in token_map.items():
             structured_map[token] = [
                 {
-                    "weight": values[0],
+                    "fieldId": values[0],
                     "position": values[1]
                 }
                 for values in hits
