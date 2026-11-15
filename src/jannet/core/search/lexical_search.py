@@ -29,6 +29,6 @@ class LexicalSearch:
         id_scores: dict = defaultdict(int)
 
         for result in results:
-            id_scores[result["id"]] = result["bm25Score"]
+            id_scores[result["docId"]] = result["bm25Score"]
 
         return id_scores
