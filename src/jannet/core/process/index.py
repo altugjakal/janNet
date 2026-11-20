@@ -43,11 +43,11 @@ class Index:
             absolute_url = absolute_url.split("#")[0]
             new_url_id = int.from_bytes(hashlib.md5(absolute_url.encode()).digest(), 'big') % 10**9
 
-            token_map = defaultdict(list)
+            anchor_token_map = defaultdict(list)
             for value in extract_words(a_v):
-                hit = (value, new_url_id)
-                token_map[value].append(hit)
-            self.ri_client.insert(id, token_map, meta=True)
+                hit = (TAG_TO_ID.get("a"), -1)
+                anchor_token_map[value].append(hit)
+            self.ri_client.insert(new_url_id, anchor_token_map, meta=True)
 
 
             if not absolute_url.startswith(("http://", "https://")):
