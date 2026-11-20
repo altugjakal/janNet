@@ -19,8 +19,11 @@ class ReverseIndexCommunicator:
         ]
         make_postr(full_url, payload)
 
-    def insert(self, doc_id, token_map):
-        full_url = self.index_url + 'insert'
+    def insert(self, doc_id, token_map, meta=False):
+        if (meta):
+            full_url = self.index_url + 'insert/meta'
+        else:
+            full_url = self.index_url + 'insert'
 
         structured_map = {}
         for token, hits in token_map.items():
