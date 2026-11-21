@@ -45,7 +45,8 @@ class Config:
         "domain": 3,
         "subdomain": 2,
         "path": 2,
-        "param": 3
+        "param": 3,
+        "a": 9
     }
 
     HTML_DEFAULT_WEIGHT = 1
