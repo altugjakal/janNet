@@ -85,7 +85,7 @@ class Index:
                 continue
             text_content = text_content.lower()
 
-            field = TAG_TO_ID.get(e.tag, Config.HTML_DEFAULT_WEIGHT)
+            field = TAG_TO_ID.get(e.tag if e.tag else Config.HTML_DEFAULT_TAG)
             if field is None:
                 continue
             for j, token in enumerate(text_content.split(" ")):

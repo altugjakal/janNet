@@ -49,12 +49,10 @@ class Config:
         "a": 9
     }
 
-    HTML_DEFAULT_WEIGHT = 1
+    HTML_DEFAULT_TAG = "p"
 
     LEXICAL_POOL_SIZE = 30
     SEMANTIC_POOL_SIZE = 30
-
-    PAGERANK_CALCULATION= False
 
     HF_TOKEN = os.getenv('HF_TOKEN')
 
