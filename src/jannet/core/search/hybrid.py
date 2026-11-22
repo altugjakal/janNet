@@ -120,7 +120,7 @@ class HybridSearch:
             )
 
             return_urls.append(url)
-            return_contents.append(all_contents[doc_id])
+            return_contents.append(all_contents[doc_id] if doc_id in all_contents else "")
 
         logger.info("Returning %d results", len(return_urls))
 
