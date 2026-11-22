@@ -38,6 +38,8 @@ class Index:
         to_be_graphed = set()
         new_count = 0
         for anchor, a_v in zip(anchors, anchor_values):
+            if len(a_v) == 0:
+                continue
             absolute_url = urljoin(url, anchor)
             absolute_url = absolute_url.rstrip("/")
             absolute_url = absolute_url.split("#")[0]
@@ -45,9 +47,8 @@ class Index:
 
             anchor_token_map = defaultdict(list)
             for value in extract_words(a_v):
-                if len(value) > 0:
-                    hit = (TAG_TO_ID.get("a"), -1)
-                    anchor_token_map[value].append(hit)
+                hit = (TAG_TO_ID.get("a"), -1)
+                anchor_token_map[value].append(hit)
             self.ri_client.insert(new_url_id, anchor_token_map, meta=True)
 
 
