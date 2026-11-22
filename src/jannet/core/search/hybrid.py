@@ -3,8 +3,6 @@ import logging
 from src.jannet.core.search.lexical_search import LexicalSearch
 from src.jannet.core.search.semantic_search import SemanticSearch
 from src.jannet.utils.config import Config
-from src.jannet.core.search.maxsim import MaxSim
-from src.jannet.utils.parsing import html_to_clean, get_tld, get_domain
 from src.jannet.utils.timer_wrapper import timed
 
 logger = logging.getLogger(__name__)
@@ -22,21 +20,8 @@ class HybridSearch:
         self.db = db
         self.v_search_instance = SemanticSearch(vdb=self.vdb, db=self.db)
         self.kw_search_instance = LexicalSearch(self.db)
-        self.maxsim_instance = MaxSim(vdb=self.vdb)
 
-    def get_tld_rank(self, url, importance):
 
-        domain = get_domain(url)
-        tld = get_tld(domain)
-        if tld in Config.EDU_TLDS:
-            tld_multiplier = Config.EDU_MULT
-        elif tld in Config.AUTHORITIVE_TLDS:
-            tld_multiplier = Config.AUTHORITIVE_MULT
-        else:
-            tld_multiplier = Config.GENERIC_MULT
-
-        base_score = importance * tld_multiplier
-        return base_score
 
     @timed
     def combined_search(self, term):
@@ -46,12 +31,7 @@ class HybridSearch:
                 return {}
             mx = max(scores.values())
             mn = min(scores.values())
-            if mx == mn:
-                return {doc_id: 1.0 for doc_id in scores}
-            return {
-                doc_id: (score - mn) / (mx - mn)
-                for doc_id, score in scores.items()
-            }
+            return {doc_id: 1.0 if mx == mn else (score - mn) / (mx - mn) for doc_id, score in scores.items()}
 
         vector_weight = self.vector_weight
         kw_weight = self.kw_weight
@@ -77,24 +57,24 @@ class HybridSearch:
         keyword_scores = normalize(keyword_scores)
         vector_scores = normalize(vector_scores)
 
-        logger.info("Fetching PageRank scores")
-        if Config.PAGERANK_CALCULATION:
-            pagerank_scores = self.db.get_pagerank_scores_batch(all_ids)
-        logger.info("PageRank fetch completed")
+
 
         logger.info("Combining ranking scores")
         combined_scores = {}
         for doc_id in all_ids:
-            kw = keyword_scores.get(doc_id, 0)
-            vec = vector_scores.get(doc_id, 0)
-            pr = pagerank_scores.get(doc_id, 0) if Config.PAGERANK_CALCULATION else 0
+            kw = keyword_scores.get(doc_id, -1)
+            vec = vector_scores.get(doc_id, -1)
 
-            if kw + vec < Config.SCORE_FILTER:
+            if vec == -1:
+                combined_score = kw
+            elif kw == -1:
+
+                combined_score = vec
+            else:
+                combined_score = (kw_weight * kw + vector_weight * vec)
+            if combined_score < Config.SCORE_FILTER:
                 logger.debug("Filtered document %d", doc_id)
                 continue
-
-            print(pr)
-            combined_score = (kw_weight * kw + vector_weight * vec) * (1 + pr)
             combined_scores[doc_id] = combined_score
 
         logger.info("Score combination completed")
@@ -103,37 +83,16 @@ class HybridSearch:
             combined_scores.items(),
             key=lambda x: x[1],
             reverse=True
-        )[:Config.FIRST_POOL_SIZE]
+        )[:Config.FIRST_POOL_SIZE][:self.return_limit]
+        top_ids = [doc_id for doc_id, _ in sorted_ids]
+
+        all_contents = self.db.get_contents_by_ids(top_ids)
 
 
-        all_contents = self.db.get_contents_by_ids([doc_id for doc_id, _ in sorted_ids])
 
-        clean_sorted_contents = {}
+        url_by_id = dict(self.db.get_url_from_ids(top_ids))
 
-        for doc_id, score in sorted_ids:
-            try:
-                clean_sorted_contents[doc_id] = html_to_clean(all_contents[doc_id])
-                logger.debug("Prepared document %d for MaxSim", doc_id)
-            except KeyError:
-                logger.warning("Missing content for document %d", doc_id)
-                continue
 
-        logger.info("Starting MaxSim reranking")
-        maxsim_scores = self.maxsim_instance.calculate(term, clean_sorted_contents)
-        logger.info("MaxSim reranking completed")
-
-        id_by_url = {}
-        final_scores_by_url = {}
-
-        for doc_id, url in self.db.get_url_from_ids(maxsim_scores.keys()):
-            id_by_url[url] = doc_id
-            final_scores_by_url[url] = maxsim_scores[doc_id]
-
-        final_sorted_urls = sorted(
-            final_scores_by_url.items(),
-            key=lambda x: self.get_tld_rank(x[0], x[1]),
-            reverse=True
-        )
 
         logger.info(
             "Hybrid search '%s': %d lexical, %d semantic, %d total candidates",
@@ -146,8 +105,8 @@ class HybridSearch:
         return_urls = []
         return_contents = []
 
-        for rank, (url, score) in enumerate(final_sorted_urls, 1):
-            doc_id = id_by_url[url]
+        for rank, (doc_id, score) in enumerate(sorted_ids, 1):
+            url = url_by_id[doc_id]
             kw = keyword_scores.get(doc_id, 0)
             vec = vector_scores.get(doc_id, 0)
 
