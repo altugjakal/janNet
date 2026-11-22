@@ -45,8 +45,9 @@ class Index:
 
             anchor_token_map = defaultdict(list)
             for value in extract_words(a_v):
-                hit = (TAG_TO_ID.get("a"), -1)
-                anchor_token_map[value].append(hit)
+                if len(value) > 0:
+                    hit = (TAG_TO_ID.get("a"), -1)
+                    anchor_token_map[value].append(hit)
             self.ri_client.insert(new_url_id, anchor_token_map, meta=True)
 
 
