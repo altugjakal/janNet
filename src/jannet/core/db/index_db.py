@@ -323,13 +323,26 @@ class IndexDB:
             return s_map
 
     def get_url_from_ids(self, ids):
+        if not ids:
+            return []
+
         placeholders = ', '.join(['%s'] * len(ids))
 
         with self.open_db() as conn:
             c = conn.cursor()
-
             c.execute(f'''SELECT id, url FROM urls WHERE id IN ({placeholders})''', tuple(ids))
-            return c.fetchall()
+            results = dict(c.fetchall())
+
+            missing_ids = [doc_id for doc_id in ids if doc_id not in results]
+            if missing_ids:
+                q_placeholders = ', '.join(['%s'] * len(missing_ids))
+                c.execute(
+                    f'''SELECT id, url FROM queue WHERE id IN ({q_placeholders})''',
+                    tuple(missing_ids),
+                )
+                results.update(c.fetchall())
+
+        return list(results.items())
 
     @db_locked
     def destroy_all_data(self):
